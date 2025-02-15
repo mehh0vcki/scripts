@@ -9,10 +9,17 @@ local CollectGhostBobux =   false
 local CollectGoldenBobux =  false
 local CollectBobuxSupply =  false
 
+local CollectGrass = false
+local SellGrass = false
+
 local AutoBobuxExchange =false
 local ChoosenUpgradeMain =  ""
 local ChoosenUpgradeGrass = ""
 local ChoosenUpgradeGolden =""
+
+local AutoclickColor = false
+local ChoosenColor = ""
+local ChoosenPoint = ""
 
 -- required
 local player = game.Players.LocalPlayer
@@ -88,6 +95,57 @@ MainChannel:Button(
     end
 )
 
+MainChannel:Label("= Grass Level =")
+MainChannel:Toggle(
+    "Collect Grass",
+    false,
+    function(bool)
+        CollectGrass = bool
+        while CollectGrass and wait(0.1) do
+            local grass = workspace:FindFirstChild("GrassBux")
+            if grass then
+                teleportStuff(grass.Handle)
+            end
+        end
+    end
+)
+
+MainChannel:Toggle(
+    "Auto Sell Grass",
+    false,
+    function(bool)
+        SellGrass = bool
+        while SellGrass and wait(2) do
+            local Character = player.Character
+            if Character then
+                local grass = Character:FindFirstChild("GrassBux")
+                if grass then
+                    Character.Humanoid:EquipTool(grass)
+                    task.wait(.2)
+                    firetouchinterest(
+                        grass.BuxTouchPart,
+                        workspace.GrassAccepter,
+                        0
+                    )
+                end
+            end
+        end
+    end
+)
+--[[
+_G.abc = true
+
+while _G.abc and task.wait(.1) do
+    firetouchinterest(
+        game.Players.LocalPlayer.Character.GrassBux.BuxTouchPart,
+        workspace.GrassAccepter,
+        0
+    )
+    -- game.Players.LocalPlayer.Character.GrassBux.Handle.CFrame = workspace.GrassAccepter.CFrame
+    -- print(game.Players.LocalPlayer.Character.GrassBux.Handle.CFrame)
+end
+]]
+
 local ToggleChannels = MainTab:Channel("Toggles")
 ToggleChannels:Label("= Collectables/Clickable = ")
 ToggleChannels:Toggle(
@@ -115,6 +173,11 @@ ToggleChannels:Toggle(
             local rareBobux = workspace:FindFirstChild("RareBobux")
             if rareBobux then
                 teleportStuff(rareBobux)
+            end
+
+            local RareBobuxColor = workspace:FindFirstChild("RareBobuxColor")
+            if RareBobuxColor then
+                teleportStuff(RareBobuxColor)
             end
         end
     end
@@ -169,10 +232,10 @@ ToggleChannels:Toggle(
     function(bool)
         CollectBobuxSupply = bool
         while true and wait() do
-            if workspace:FindFirstChild("LotOfRareRobux") then
-                local items = workspace:FindFirstChild("LotOfRareRobux"):GetChildren()
+            if workspace:FindFirstChild("LotOfRareBobux") then
+                local items = workspace:FindFirstChild("LotOfRareBobux"):GetChildren()
                 if #items == 0 then
-                    workspace:FindFirstChild("LotOfRareRobux"):Destroy()
+                    workspace:FindFirstChild("LotOfRareBobux"):Destroy()
                 end
             else
                 break
@@ -184,10 +247,10 @@ ToggleChannels:Toggle(
             if bobuxSupply then
                 fireclickdetector(bobuxSupply.ClickDetector, math.random(1, 3))
                 task.wait(2)
-                local LotOfRareRobux = workspace.LotOfRareBobux
+                local LotOfRareBobux = workspace.LotOfRareBobux
 
-                if LotOfRareRobux then
-                    for _, item in ipairs(LotOfRareRobux:GetChildren()) do
+                if LotOfRareBobux then
+                    for _, item in ipairs(LotOfRareBobux:GetChildren()) do
                         teleportStuff(item)
                     end
                 end
@@ -290,6 +353,92 @@ PurchaseChannel:Button(
     end
 )
 
+local ColorChannel = MainTab:Channel("Colors Room")
+ColorChannel:Label("you must unlock [Room3] first!")
+ColorChannel:Toggle(
+    "Auto-click colors",
+    false,
+    function(bool)
+        AutoClickColors = bool
+        local meaninigs = {
+            [1] = "Red",
+            [2] = "Blue",
+            [3] = "Green",
+            [4] = "White",
+            [5] = "Yellow"
+        }
+
+        while AutoClickColors and task.wait(1) do
+            local clickButton = workspace:FindFirstChild("ClickButton")
+            if clickButton then
+                local ButtonNumber = clickButton.WhichButton.Value
+                if meaninigs[ButtonNumber] ~= nil then
+                    local button = clickButton[meaninigs[ButtonNumber]]
+                    fireclickdetector(button.ClickDetector, math.random(1, 3))
+                end
+            end
+        end
+    end
+)
+
+ColorChannel:Dropdown(
+    "Choose Upgrade",
+    {
+        "ColorGameRefreshUpgrade",
+        "WalkSpeedUpgrade1",
+        "LeftForRewardUpgrade",
+        "RewardTierUpgrade",
+        "MultiplierBobux4",
+    },
+    function(option)
+        ChoosenUpgradeColors = option
+    end
+)
+
+ColorChannel:Button(
+    "Purchase Upgrade",
+    function()
+        local upgrades = workspace:FindFirstChild("Upgrades")
+        if upgrades then
+            local upgrade = upgrades:FindFirstChild(ChoosenUpgradeColors)
+            print(upgrade)
+            if upgrade then
+                fireclickdetector(upgrade.Button.ClickDetector, math.random(1, 3))
+            end
+        end
+    end
+)
+
+local PointMachineChannel = MainTab:Channel("Point Machine")
+PointMachineChannel:Label("you must unlock [Room4] first!")
+PointMachineChannel:Dropdown(
+    "Choose Upgrade",
+    {
+        "PointGainUpgrade1",
+        "PointsMultiplierUpgrade1",
+        "PointsCDUpgrade1",
+        "WalkSpeedUpgrade2",
+        "BobuxUpgrade4",
+        "PointsLimitUpgrade",
+    },
+    function(option)
+        ChoosenUpgradePointMachine = option
+    end
+)
+
+PointMachineChannel:Button(
+    "Purchase Upgrade",
+    function()
+        local upgrades = workspace:FindFirstChild("Upgrades")
+        if upgrades then
+            local upgrade = upgrades:FindFirstChild(ChoosenUpgradePointMachine)
+            if upgrade then
+                fireclickdetector(upgrade.Button.ClickDetector, math.random(1, 3))
+            end
+        end
+    end
+)
+
 local CreditTab = UIWindow:Server("[v0.2] Credits", "rbxassetid://110969324988843")
 local CreditChannel = CreditTab:Channel("@mehhovcki")
 CreditChannel:Label("# created by @mehhovcki")
@@ -302,7 +451,7 @@ CreditChannel:Label("someone made a dollar out of you.")
 CreditChannel:Button(
     "Copy Script Page",
     function()
-        setclipboard("https://scriptblox.com/script/Update-7.5-Clicker-Incremental-SIMPLE-SCRIPT-For-29299")
+        setclipboard("https://scriptblox.com/script/Update-7.5-Clicker-Incremental-SIMPLE-SCRIPT-29338")
         DiscordUI:Notification(
             "Copied Script Page",
             "Succesfully copied Script Page.",
@@ -327,13 +476,14 @@ CreditChannel:Label("best support you can give is:")
 CreditChannel:Label("* like on scriptblox.com")
 CreditChannel:Label("* star on github")
 
-local VersionChannel = CreditTab:Channel("Version")
-VersionChannel:Label("[ Update Log for version #0.2 ]")
-VersionChannel:Label("* bobux > gold bobux echange")
-VersionChannel:Label("* seperated bobux collection")
-VersionChannel:Label("* added ability to buy upgrades for rooms:")
-VersionChannel:Label("  > main")
-VersionChannel:Label("  > golden")
-VersionChannel:Label("  > grass")
-VersionChannel:Label("* using Discord UI! :D")
+CreditChannel:Button(
+    "View update log",
+    function()
+        DiscordUI:Notification(
+            "Update Log",
+            "https://scriptblox.com/script/Update-7.5-Clicker-Incremental-SIMPLE-SCRIPT-For-29299",
+            "Ok!"
+        )
+    end
+)
 -- mehhovcki was here ;3
