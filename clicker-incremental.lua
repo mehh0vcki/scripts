@@ -439,7 +439,7 @@ PointMachineChannel:Button(
     end
 )
 
-local CreditTab = UIWindow:Server("[v0.2] Credits", "rbxassetid://110969324988843")
+local CreditTab = UIWindow:Server("[v0.3] Credits", "rbxassetid://110969324988843")
 local CreditChannel = CreditTab:Channel("@mehhovcki")
 CreditChannel:Label("# created by @mehhovcki")
 CreditChannel:Label("you can find scripts here:")
