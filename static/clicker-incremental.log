@@ -1,0 +1,8 @@
+[ version 0.2 ]
+- bobux > gold bobux echange
+- seperated bobux collection
+- ability to buy upgrades for:
+- * main
+- * golden
+- * grass
+- made switch from switching variables to using Discord UI Lib! :D
