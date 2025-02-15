@@ -481,7 +481,7 @@ CreditChannel:Button(
     function()
         DiscordUI:Notification(
             "Update Log",
-            "https://scriptblox.com/script/Update-7.5-Clicker-Incremental-SIMPLE-SCRIPT-For-29299",
+            "https://github.com/mehh0vcki/scripts/blob/main/static/clicker-incremental.log",
             "Ok!"
         )
     end
