@@ -7,3 +7,9 @@
 - * grass
 - made switch from switching variables to using Discord UI Lib! :D
 - temporarily removed auto grassbux collection
+
+[ version 0.3]
+* added autoclick & upgrade purchase for [Room 3] (Color room)
+* added upgrade purchase for [Room 4] (Upgrade)
+* re-added grass collect
+* added grass sell
