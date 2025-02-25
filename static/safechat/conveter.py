@@ -37,7 +37,7 @@ for i, branch in enumerate(lua_root['Branches']):
     lua_code += f'\n{to_lua(branch, 4)}'
     if i < len(lua_root['Branches']) - 1:
         lua_code += ','
-lua_code += '\n    }\n}\n'
+lua_code += '\n    }\n}\nreturn safeChatData'
 
 with open('safechat.lua', 'w') as f:
     f.write(lua_code)
