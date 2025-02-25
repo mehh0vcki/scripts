@@ -2350,3 +2350,4 @@ local safeChatData = {
         }
     }
 }
+return safeChatData
