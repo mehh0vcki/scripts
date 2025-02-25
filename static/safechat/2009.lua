@@ -1863,3 +1863,5 @@ local safeChatData = {
 			}
 		}
 	}
+
+return safeChatData
