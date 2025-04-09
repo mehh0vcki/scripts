@@ -56,7 +56,7 @@ local Languages = {
 		settings_myAccount = "My Account",
 		settings_appearance = "Appearance",
 		settings_language = "Language",
-		settings_discordInfo = "Stable 1.0.4 (00005)\nHost 1.0.0\nRoblox Luau Engine\nOriginal by dawid-scripts\nRewrite by mehh9519",
+		settings_discordInfo = "Stable 1.0.3 (00004)\nHost 1.0.0\nRoblox Luau Engine",
 		settings_escHint = "LALT",
 
 		header_myAccount = "MY ACCOUNT",
@@ -145,9 +145,9 @@ local Languages = {
 		popup_changeUsernameErrorLong = "El nombre de usuario debe tener entre 1 y 32 caracteres.",
 		popup_changeUsernameErrorTitle = "Error de Nombre de Usuario",
 
-		status_online = "Conectado",
-		status_idle = "Ausente",
-		status_dnd = "No Molestar",
+		status_online = "Online",
+		status_idle = "Idle",
+		status_dnd = "Do Not Disturb",
 		status_invisible = "Invisible",
 	},
 	["ru"] = {
@@ -194,10 +194,10 @@ local Languages = {
 		popup_changeUsernameErrorLong = "Имя пользователя должно быть от 1 до 32 символов.",
 		popup_changeUsernameErrorTitle = "Ошибка Имени Пользователя",
 
-		status_online = "В сети",
-		status_idle = "Отошел",
-		status_dnd = "Не беспокоить",
-		status_invisible = "Невидимый",
+		status_online = "Online",
+		status_idle = "Idle",
+		status_dnd = "Do Not Disturb",
+		status_invisible = "Invisible",
 	}
 }
 
