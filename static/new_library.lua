@@ -9,6 +9,11 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
+DiscordLib.ScreenGui = nil
+DiscordLib.dragCleanup = nil
+DiscordLib.globalInputConnection = nil
+DiscordLib.activeConnections = {}
+
 local userinfo = {}
 local DEFAULT_PFP = "https://www.roblox.com/headshot-thumbnail/image?userId=".. (LocalPlayer and LocalPlayer.UserId or 0) .."&width=420&height=420&format=png"
 local DEFAULT_USER = (LocalPlayer and LocalPlayer.Name or "User")
@@ -458,10 +463,9 @@ local function MakeDraggable(topbarobject, object)
 		local Succeeded, Failed = pcall(function() object.Position = pos end)
 		if not Succeeded then
 			Dragging = false
-			if Connection["InputChanged"] then Connection["InputChanged"]:Disconnect() end
-			if Connection["InputEnded"] then Connection["InputEnded"]:Disconnect() end
-			if Connection["TopBarInputBegan"] then Connection["TopBarInputBegan"]:Disconnect() end
-			if Connection["TopBarInputChanged"] then Connection["TopBarInputChanged"]:Disconnect() end
+			for _, conn in pairs(Connection) do
+				pcall(function() if conn then conn:Disconnect() end end)
+			end
 			table.clear(Connection)
 		end
 	end
@@ -471,13 +475,12 @@ local function MakeDraggable(topbarobject, object)
 			Dragging = true
 			DragStart = input.Position
 			StartPosition = object.Position
-
 			if Connection["InputEnded"] then Connection["InputEnded"]:Disconnect() end
 			Connection["InputEnded"] = input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
 					Dragging = false
 					StartPosition = nil
-					if Connection["InputEnded"] then Connection["InputEnded"]:Disconnect() end
+					if Connection["InputEnded"] then Connection["InputEnded"]:Disconnect(); Connection["InputEnded"] = nil end
 				end
 			end)
 		end
@@ -490,7 +493,7 @@ local function MakeDraggable(topbarobject, object)
 	end)
 
 	Connection["InputChanged"] = UserInputService.InputChanged:Connect(function(input)
-		if input == DragInput and Dragging then
+		if input == DragInput and Dragging and object and object.Parent then
 			Update(input)
 		end
 	end)
@@ -503,7 +506,42 @@ local function MakeDraggable(topbarobject, object)
 	end
 end
 
+function DiscordLib:Unload()
+	if not DiscordLib.ScreenGui or not DiscordLib.ScreenGui.Parent then
+		return
+	end
+
+	if DiscordLib.dragCleanup then
+		pcall(DiscordLib.dragCleanup)
+		DiscordLib.dragCleanup = nil
+	end
+
+	if DiscordLib.globalInputConnection then
+		pcall(function() DiscordLib.globalInputConnection:Disconnect() end)
+		DiscordLib.globalInputConnection = nil
+	end
+
+	for key, conn in pairs(DiscordLib.activeConnections) do
+		pcall(function() if conn and conn.Connected then conn:Disconnect() end end)
+	end
+	table.clear(DiscordLib.activeConnections)
+
+	pcall(function() DiscordLib.ScreenGui:Destroy() end)
+
+	DiscordLib.ScreenGui = nil
+end
+
+
 function DiscordLib:Window(text)
+
+	if DiscordLib.ScreenGui and DiscordLib.ScreenGui.Parent then
+		warn("DiscordLib: Window already exists. Unload the existing one first using DiscordLib:Unload()")
+		return nil
+	end
+
+	if DiscordLib.dragCleanup then pcall(DiscordLib.dragCleanup) DiscordLib.dragCleanup = nil end
+	if DiscordLib.globalInputConnection then pcall(DiscordLib.globalInputConnection.Disconnect, DiscordLib.globalInputConnection) DiscordLib.globalInputConnection = nil end
+	table.clear(DiscordLib.activeConnections)
 
 	local Elements = {}
 	local currentservertoggled = ""
@@ -512,10 +550,10 @@ function DiscordLib:Window(text)
 	local settingsopened = false
 	local CurrentTheme = Themes[currentThemeName]
 	local statusPopupOpen = false
-	local dragCleanup = nil
 	Elements.CornerNotifications = {}
 
 	local function ApplyLanguage(initialLoad)
+		if not DiscordLib.ScreenGui then return end
 		if Elements.SettingsTitle then Elements.SettingsTitle.Text = GetTranslation("settings_userSettings") end
 		if Elements.MyAccountBtnTitle then Elements.MyAccountBtnTitle.Text = GetTranslation("settings_myAccount") end
 		if Elements.AppearanceBtnTitle then Elements.AppearanceBtnTitle.Text = GetTranslation("settings_appearance") end
@@ -615,13 +653,13 @@ function DiscordLib:Window(text)
 			end
 		end
 
-
 		if not initialLoad then
 			SaveInfo()
 		end
 	end
 
 	local function ApplyTheme(themeName, initialLoad)
+		if not DiscordLib.ScreenGui then return end
 		currentThemeName = themeName
 		CurrentTheme = Themes[themeName] or Themes.Dark
 
@@ -706,7 +744,6 @@ function DiscordLib:Window(text)
 				if settingsOpenBtnIco then tweenColor(settingsOpenBtnIco, "ImageColor3", CurrentTheme.IconColor) end
 			end
 		end
-
 
 		local serversHoldFrame = Elements.ServersHoldFrame
 		if serversHoldFrame then
@@ -1138,6 +1175,7 @@ function DiscordLib:Window(text)
 	end
 
 	local function ApplyStatus(statusKeyToUse, initialLoad)
+		if not DiscordLib.ScreenGui then return end
 		if not table.find(Statuses, statusKeyToUse) then
 			warn("DiscordLib: Invalid status key provided to ApplyStatus:", statusKeyToUse)
 			return
@@ -1177,6 +1215,8 @@ function DiscordLib:Window(text)
 	end
 
 	local function CreateCornerNotification(titletext, desctext)
+		if not DiscordLib.ScreenGui then return end
+
 		local notifWidth = 280
 		local notifHeight = 80
 		local padding = 15
@@ -1184,10 +1224,17 @@ function DiscordLib:Window(text)
 		local CornerNotifFrame = Instance.new("Frame")
 		Elements.CornerNotifications[#Elements.CornerNotifications + 1] = CornerNotifFrame
 		CornerNotifFrame.Name = "CornerNotification"
-		CornerNotifFrame.Parent = Discord
+		CornerNotifFrame.Parent = DiscordLib.ScreenGui
 		CornerNotifFrame.AnchorPoint = Vector2.new(1, 1)
-		local verticalOffset = -padding - (notifHeight * (#Elements.CornerNotifications -1)) - (padding * (#Elements.CornerNotifications - 1))
-		CornerNotifFrame.Position = UDim2.new(1, -padding - notifWidth, 1, verticalOffset)
+
+		local visibleNotifs = 0
+		for _, existingNotif in ipairs(Elements.CornerNotifications) do
+			if existingNotif and existingNotif.Parent then
+				visibleNotifs = visibleNotifs + 1
+			end
+		end
+		local verticalOffset = -padding - (notifHeight * (visibleNotifs -1)) - (padding * (visibleNotifs - 1))
+		CornerNotifFrame.Position = UDim2.new(1, -padding - notifWidth, 1, verticalOffset + notifHeight)
 		CornerNotifFrame.Size = UDim2.new(0, notifWidth, 0, notifHeight)
 		CornerNotifFrame.BackgroundColor3 = CurrentTheme.TooltipBackground
 		CornerNotifFrame.BackgroundTransparency = 0.1
@@ -1245,36 +1292,40 @@ function DiscordLib:Window(text)
 
 		local function dismissNotification(animate)
 			if CornerNotifFrame and CornerNotifFrame.Parent then
+				local indexToRemove = nil
 				for i, frame in ipairs(Elements.CornerNotifications) do
 					if frame == CornerNotifFrame then
-						table.remove(Elements.CornerNotifications, i)
+						indexToRemove = i
 						break
 					end
+				end
+				if indexToRemove then
+					table.remove(Elements.CornerNotifications, indexToRemove)
 				end
 
 				if animate then
 					TweenService:Create(CornerNotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-						Position = UDim2.new(0, -notifWidth, 1, -padding),
+						Position = UDim2.new(1, padding, 1, CornerNotifFrame.Position.Y.Offset),
 						BackgroundTransparency = 1
 					}):Play()
 					task.wait(0.3)
 					if CornerNotifFrame and CornerNotifFrame.Parent then CornerNotifFrame:Destroy() end
 				else
-					CornerNotifFrame.BackgroundTransparency = 1
 					CornerNotifFrame:Destroy()
 				end
 
 				for i, frame in ipairs(Elements.CornerNotifications) do
 					if frame and frame.Parent then
 						local newYOffset = -padding - (notifHeight * (i - 1)) - (padding * (i - 1))
+						TweenService:Create(frame, TweenInfo.new(0.2), { Position = UDim2.new(1, -padding, 1, newYOffset)}):Play()
 					end
 				end
 			end
 		end
-		
+
 		CloseNotifBtn.MouseButton1Click:Connect(function() dismissNotification(true) end)
-		CloseNotifBtn.MouseEnter:Connect(function() CloseNotifBtn.ImageColor3 = CurrentTheme.IconHoverColor end)
-		CloseNotifBtn.MouseLeave:Connect(function() CloseNotifBtn.ImageColor3 = CurrentTheme.IconMuted end)
+		CloseNotifBtn.MouseEnter:Connect(function() if CloseNotifBtn and CloseNotifBtn.Parent then CloseNotifBtn.ImageColor3 = CurrentTheme.IconHoverColor end end)
+		CloseNotifBtn.MouseLeave:Connect(function() if CloseNotifBtn and CloseNotifBtn.Parent then CloseNotifBtn.ImageColor3 = CurrentTheme.IconMuted end end)
 
 		TweenService:Create(CornerNotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Position = UDim2.new(1, -padding, 1, verticalOffset)
@@ -1287,20 +1338,20 @@ function DiscordLib:Window(text)
 		end)
 	end
 
-	Discord = Instance.new("ScreenGui")
-	Discord.Name = "DiscordLib_" .. HttpService:GenerateGUID(false)
+	DiscordLib.ScreenGui = Instance.new("ScreenGui")
+	DiscordLib.ScreenGui.Name = "DiscordLib_" .. HttpService:GenerateGUID(false)
 	if RunService:IsStudio() then
-		Discord.Parent = LocalPlayer and LocalPlayer.PlayerGui or CoreGui
+		DiscordLib.ScreenGui.Parent = LocalPlayer and LocalPlayer.PlayerGui or CoreGui
 	else
-		Discord.Parent = CoreGui
+		DiscordLib.ScreenGui.Parent = CoreGui
 	end
-	Discord.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	Discord.ResetOnSpawn = false
+	DiscordLib.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	DiscordLib.ScreenGui.ResetOnSpawn = false
 
 	local MainFrame = Instance.new("Frame")
 	Elements.MainFrame = MainFrame
 	MainFrame.Name = "MainFrame"
-	MainFrame.Parent = Discord
+	MainFrame.Parent = DiscordLib.ScreenGui
 	MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 	MainFrame.BorderSizePixel = 0
 	MainFrame.ClipsDescendants = true
@@ -1910,7 +1961,6 @@ function DiscordLib:Window(text)
 	UserPanelUser.Text = user
 	UserPanelUser.ZIndex = UserPanelContentContainer.ZIndex + 1
 
-
 	local UserSettingsPad = Instance.new("Frame")
 	Elements.UserSettingsPad = UserSettingsPad
 	UserSettingsPad.Name = "UserSettingsPad"
@@ -2158,13 +2208,11 @@ function DiscordLib:Window(text)
 		end
 	end
 
-	dragCleanup = MakeDraggable(TopFrame, MainFrame)
+	DiscordLib.dragCleanup = MakeDraggable(TopFrame, MainFrame)
 
 	CloseBtn.MouseButton1Click:Connect(function()
-		MainFrame:TweenSize(UDim2.new(0, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .3, true, function()
-			pcall(function() if dragCleanup then dragCleanup() end end)
-			Discord:Destroy()
-			DiscordLib = nil
+		MainFrame:TweenSize(UDim2.new(0, MainFrame.AbsoluteSize.X, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .3, true, function()
+			DiscordLib:Unload()
 		end)
 	end)
 
@@ -2442,7 +2490,8 @@ function DiscordLib:Window(text)
 	SetupSettingsButtonHover(Elements.AppearanceBtn, Elements.AppearanceBtnTitle, Elements.AppearancePanel)
 	SetupSettingsButtonHover(Elements.LanguageBtn, Elements.LanguageBtnTitle, Elements.LanguagePanel)
 
-	UserInputService.InputBegan:Connect(function(io, p)
+	DiscordLib.globalInputConnection = UserInputService.InputBegan:Connect(function(io, p)
+		if not DiscordLib.ScreenGui then return end
 		if p then return end
 		if io.KeyCode == Enum.KeyCode.LeftAlt then
 			local statusPopup = Elements.Userpad and Elements.Userpad:FindFirstChild("StatusPopup")
@@ -2537,7 +2586,6 @@ function DiscordLib:Window(text)
 		UnderBarFrame.Position = UDim2.new(0, 0, 1, 0)
 		UnderBarFrame.Size = UDim2.new(1, 0, 0, 50)
 		UnderBarFrame.Parent = BannerChange
-
 
 		local Text1 = Instance.new("TextLabel")
 		Text1.Name = "Text1"
@@ -2762,7 +2810,6 @@ function DiscordLib:Window(text)
 			UnderBarFrame.Position = UDim2.new(0, 0, 1, 0)
 			UnderBarFrame.Size = UDim2.new(1, 0, 0, 50)
 			UnderBarFrame.Parent = AvatarChange
-
 
 			local Text1 = Instance.new("TextLabel")
 			Text1.Name = "Text1"
@@ -3002,7 +3049,6 @@ function DiscordLib:Window(text)
 			UnderBarFrame.Position = UDim2.new(0, 0, 1, 0)
 			UnderBarFrame.Size = UDim2.new(1, 0, 0, 50)
 			UnderBarFrame.Parent = UserChange
-
 
 			local Text1 = Instance.new("TextLabel")
 			Text1.Name = "Text1"
@@ -3671,7 +3717,6 @@ function DiscordLib:Window(text)
 				tweenColor(Button, "BackgroundColor3", CurrentTheme.ButtonBackground)
 				tweenColor(Button, "TextColor3", CurrentTheme.ButtonText)
 
-
 				Button.MouseEnter:Connect(function() TweenService:Create(Button, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonHover}):Play() end)
 				Button.MouseLeave:Connect(function() TweenService:Create(Button, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonBackground}):Play() end)
 				Button.MouseButton1Click:Connect(function()
@@ -3875,7 +3920,6 @@ function DiscordLib:Window(text)
 				tweenColor(ValueBubble, "BorderColor3", CurrentTheme.InputOutline)
 				tweenColor(ValueLabel, "TextColor3", CurrentTheme.TooltipText)
 
-
 				local dragConnection = nil
 				local function UpdateSlider(inputPosition)
 					local relativeX = inputPosition.X - SliderFrame.AbsolutePosition.X
@@ -4061,7 +4105,6 @@ function DiscordLib:Window(text)
 				tweenColor(Title, "TextColor3", CurrentTheme.SecondaryText)
 				tweenColor(KeyButton, "BackgroundColor3", CurrentTheme.InputBackground)
 				tweenColor(KeyButton, "TextColor3", CurrentTheme.PrimaryText)
-
 
 				local inputConnection = nil
 				KeyButton.MouseButton1Click:Connect(function()
