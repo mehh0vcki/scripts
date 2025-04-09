@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
@@ -13,6 +14,7 @@ DiscordLib.ScreenGui = nil
 DiscordLib.dragCleanup = nil
 DiscordLib.globalInputConnection = nil
 DiscordLib.activeConnections = {}
+DiscordLib.resizeConnections = {}
 
 local userinfo = {}
 local DEFAULT_PFP = "https://www.roblox.com/headshot-thumbnail/image?userId=".. (LocalPlayer and LocalPlayer.UserId or 0) .."&width=420&height=420&format=png"
@@ -54,7 +56,7 @@ local Languages = {
 		settings_myAccount = "My Account",
 		settings_appearance = "Appearance",
 		settings_language = "Language",
-		settings_discordInfo = "Stable 1.0.3 (00004)\nHost 1.0.0\nRoblox Luau Engine",
+		settings_discordInfo = "Stable 1.0.4 (00005)\nHost 1.0.0\nRoblox Luau Engine\nOriginal by dawid-scripts\nRewrite by mehh9519",
 		settings_escHint = "LALT",
 
 		header_myAccount = "MY ACCOUNT",
@@ -62,9 +64,9 @@ local Languages = {
 		header_language = "LANGUAGE",
 
 		account_changeAvatarHover = "CHANGE\nAVATAR",
+		account_changeBannerHover = "CHANGE\nBANNER",
 		account_usernameLabel = "USERNAME",
 		account_editButton = "Edit",
-		account_editBannerButton = "Edit Banner",
 
 		appearance_desc = "Adjust the color of the interface for better visibility.",
 
@@ -111,9 +113,9 @@ local Languages = {
 		header_language = "IDIOMA",
 
 		account_changeAvatarHover = "CAMBIAR\nAVATAR",
+		account_changeBannerHover = "CAMBIAR\nBANNER",
 		account_usernameLabel = "NOMBRE DE USUARIO",
 		account_editButton = "Editar",
-		account_editBannerButton = "Editar Banner",
 
 		appearance_desc = "Ajusta el color de la interfaz para una mejor visibilidad.",
 
@@ -160,9 +162,9 @@ local Languages = {
 		header_language = "ЯЗЫК",
 
 		account_changeAvatarHover = "СМЕНИТЬ\nАВАТАР",
+		account_changeBannerHover = "СМЕНИТЬ\nБАННЕР",
 		account_usernameLabel = "ИМЯ ПОЛЬЗОВАТЕЛЯ",
 		account_editButton = "Изменить",
-		account_editBannerButton = "Изменить баннер",
 
 		appearance_desc = "Настройте цвет интерфейса для лучшей видимости.",
 
@@ -247,6 +249,7 @@ local Themes = {
 		ChannelButtonActive = Color3.fromRGB(220, 221, 222),
 		Scrollbar = Color3.fromRGB(200, 202, 205),
 		Separator = Color3.fromRGB(218, 219, 222),
+		ResizeSeparatorColor = Color3.fromRGB(200, 202, 205),
 		PopupBackground = Color3.fromRGB(255, 255, 255),
 		PopupSecondaryBackground = Color3.fromRGB(242, 243, 245),
 		TooltipBackground = Color3.fromRGB(18, 19, 20),
@@ -301,6 +304,7 @@ local Themes = {
 		ChannelButtonActive = Color3.fromRGB(57, 60, 67),
 		Scrollbar = Color3.fromRGB(18, 19, 21),
 		Separator = Color3.fromRGB(66, 69, 74),
+		ResizeSeparatorColor = Color3.fromRGB(32, 34, 37),
 		PopupBackground = Color3.fromRGB(54, 57, 63),
 		PopupSecondaryBackground = Color3.fromRGB(47, 49, 54),
 		TooltipBackground = Color3.fromRGB(18, 19, 20),
@@ -355,6 +359,7 @@ local Themes = {
 		ChannelButtonActive = Color3.fromRGB(54, 57, 63),
 		Scrollbar = Color3.fromRGB(15, 16, 17),
 		Separator = Color3.fromRGB(54, 57, 63),
+		ResizeSeparatorColor = Color3.fromRGB(32, 34, 37),
 		PopupBackground = Color3.fromRGB(47, 49, 54),
 		PopupSecondaryBackground = Color3.fromRGB(41, 44, 49),
 		TooltipBackground = Color3.fromRGB(12, 13, 14),
@@ -409,6 +414,7 @@ local Themes = {
 		ChannelButtonActive = Color3.fromRGB(35, 35, 35),
 		Scrollbar = Color3.fromRGB(25, 25, 25),
 		Separator = Color3.fromRGB(30, 30, 30),
+		ResizeSeparatorColor = Color3.fromRGB(30, 30, 30),
 		PopupBackground = Color3.fromRGB(15, 15, 15),
 		PopupSecondaryBackground = Color3.fromRGB(10, 10, 10),
 		TooltipBackground = Color3.fromRGB(5, 5, 5),
@@ -521,10 +527,18 @@ function DiscordLib:Unload()
 		DiscordLib.globalInputConnection = nil
 	end
 
+	for key, connTable in pairs(DiscordLib.resizeConnections) do
+		if connTable.InputBegan then pcall(connTable.InputBegan.Disconnect, connTable.InputBegan) end
+		if connTable.InputChanged then pcall(connTable.InputChanged.Disconnect, connTable.InputChanged) end
+		if connTable.InputEnded then pcall(connTable.InputEnded.Disconnect, connTable.InputEnded) end
+	end
+	table.clear(DiscordLib.resizeConnections)
+
 	for key, conn in pairs(DiscordLib.activeConnections) do
 		pcall(function() if conn and conn.Connected then conn:Disconnect() end end)
 	end
 	table.clear(DiscordLib.activeConnections)
+
 
 	pcall(function() DiscordLib.ScreenGui:Destroy() end)
 
@@ -533,7 +547,6 @@ end
 
 
 function DiscordLib:Window(text)
-
 	if DiscordLib.ScreenGui and DiscordLib.ScreenGui.Parent then
 		warn("DiscordLib: Window already exists. Unload the existing one first using DiscordLib:Unload()")
 		return nil
@@ -542,6 +555,7 @@ function DiscordLib:Window(text)
 	if DiscordLib.dragCleanup then pcall(DiscordLib.dragCleanup) DiscordLib.dragCleanup = nil end
 	if DiscordLib.globalInputConnection then pcall(DiscordLib.globalInputConnection.Disconnect, DiscordLib.globalInputConnection) DiscordLib.globalInputConnection = nil end
 	table.clear(DiscordLib.activeConnections)
+	table.clear(DiscordLib.resizeConnections)
 
 	local Elements = {}
 	local currentservertoggled = ""
@@ -551,6 +565,49 @@ function DiscordLib:Window(text)
 	local CurrentTheme = Themes[currentThemeName]
 	local statusPopupOpen = false
 	Elements.CornerNotifications = {}
+	Elements.ServerData = {}
+
+	local function UpdateChannelTextTruncation(channelListFrame, serverChannelHolder)
+		if not (channelListFrame and channelListFrame.Parent and serverChannelHolder and serverChannelHolder.Parent) then return end
+
+		local listWidth = channelListFrame.AbsoluteSize.X
+		local paddingLeft = 8
+		local paddingRight = 8
+
+		for _, channelBtn in ipairs(serverChannelHolder:GetChildren()) do
+			if channelBtn:IsA("TextButton") and channelBtn:FindFirstChild("ChannelBtnTitle") then
+				local hashtag = channelBtn:FindFirstChild("ChannelBtnHashtag")
+				local title = channelBtn:FindFirstChild("ChannelBtnTitle")
+				local layout = channelBtn:FindFirstChildOfClass("UIListLayout")
+				local btnPadding = channelBtn:FindFirstChildOfClass("UIPadding")
+
+				local fullText = title:GetAttribute("FullText")
+				if not fullText then continue end
+
+				local hashtagWidth = hashtag and hashtag.AbsoluteSize.X or 0
+				local layoutPadding = layout and layout.Padding.Offset or 0
+				local buttonPaddingLeft = btnPadding and btnPadding.PaddingLeft.Offset or 0
+
+				local availableWidth = listWidth - paddingLeft - paddingRight - buttonPaddingLeft - hashtagWidth - layoutPadding - 10
+
+				local textSize = TextService:GetTextSize(
+					fullText,
+					title.TextSize,
+					title.Font,
+					Vector2.new(availableWidth, title.AbsoluteSize.Y)
+				)
+
+				if textSize.X <= availableWidth then
+					title.Text = fullText
+					title.TextTruncate = Enum.TextTruncate.None
+				else
+					title.Text = fullText
+					title.TextTruncate = Enum.TextTruncate.AtEnd
+				end
+			end
+		end
+	end
+
 
 	local function ApplyLanguage(initialLoad)
 		if not DiscordLib.ScreenGui then return end
@@ -575,9 +632,10 @@ function DiscordLib:Window(text)
 		end
 
 		if Elements.ChangeAvatarText then Elements.ChangeAvatarText.Text = GetTranslation("account_changeAvatarHover") end
+		if Elements.ChangeBannerText then Elements.ChangeBannerText.Text = GetTranslation("account_changeBannerHover") end
 		if Elements.UsernameTextLabel then Elements.UsernameTextLabel.Text = GetTranslation("account_usernameLabel") end
 		if Elements.EditBtn then Elements.EditBtn.Text = GetTranslation("account_editButton") end
-		if Elements.EditBannerBtn then Elements.EditBannerBtn.Text = GetTranslation("account_editBannerButton") end
+
 
 		if Elements.AppearanceDesc then Elements.AppearanceDesc.Text = GetTranslation("appearance_desc") end
 
@@ -850,10 +908,10 @@ function DiscordLib:Window(text)
 								userBannerImage.Image = banner
 							end
 
-							local editBannerBtn = Elements.EditBannerBtn
-							if editBannerBtn then
-								tweenColor(editBannerBtn, "BackgroundColor3", CurrentTheme.ButtonSecondaryBackground)
-								tweenColor(editBannerBtn, "TextColor3", CurrentTheme.ButtonText)
+							local bannerHoverFrame = Elements.BannerHoverFrame
+							if bannerHoverFrame then
+								local changeBannerText = Elements.ChangeBannerText
+								if changeBannerText then tweenColor(changeBannerText, "TextColor3", Color3.new(1,1,1)) end
 							end
 
 							local userPanelContentContainer = Elements.UserPanelContentContainer
@@ -992,7 +1050,13 @@ function DiscordLib:Window(text)
 								if chanTitle then tweenColor(chanTitle, "TextColor3", isActive and CurrentTheme.InteractiveActive or CurrentTheme.InteractiveNormal) end
 							end
 						end
+						UpdateChannelTextTruncation(channelListFrame, channelHolderScroll)
 					end
+				end
+
+				local resizeSeparator = serverFrame:FindFirstChild("ResizeSeparator")
+				if resizeSeparator then
+					tweenColor(resizeSeparator, "BackgroundColor3", CurrentTheme.ResizeSeparatorColor)
 				end
 
 				local contentAreaFrame = serverFrame:FindFirstChild("ContentAreaFrame")
@@ -1509,6 +1573,7 @@ function DiscordLib:Window(text)
 	UserName.Font = Enum.Font.GothamMedium
 	UserName.Text = user
 	UserName.TextSize = 13.000
+	UserName.TextTruncate = Enum.TextTruncate.AtEnd
 	UserName.TextXAlignment = Enum.TextXAlignment.Left
 	UserName.ClipsDescendants = true
 
@@ -1851,22 +1916,40 @@ function DiscordLib:Window(text)
 	UserBannerImage.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
 	UserBannerImage.BackgroundTransparency = 0
 
-	local EditBannerBtn = Instance.new("TextButton")
-	Elements.EditBannerBtn = EditBannerBtn
-	EditBannerBtn.Name = "EditBannerBtn"
-	EditBannerBtn.Parent = UserSettingsCard
-	EditBannerBtn.AnchorPoint = Vector2.new(1, 0)
-	EditBannerBtn.Position = UDim2.new(1, -10, 0, 10)
-	EditBannerBtn.Size = UDim2.new(0, 85, 0, 24)
-	EditBannerBtn.Font = Enum.Font.GothamMedium
-	EditBannerBtn.Text = GetTranslation("account_editBannerButton")
-	EditBannerBtn.TextSize = 11.000
-	EditBannerBtn.AutoButtonColor = false
-	EditBannerBtn.ZIndex = 3
+	local BannerHoverFrame = Instance.new("Frame")
+	Elements.BannerHoverFrame = BannerHoverFrame
+	BannerHoverFrame.Name = "BannerHoverFrame"
+	BannerHoverFrame.Parent = UserBannerImage
+	BannerHoverFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	BannerHoverFrame.BackgroundTransparency = 0.400
+	BannerHoverFrame.BorderSizePixel = 0
+	BannerHoverFrame.Size = UDim2.new(1, 0, 1, 0)
+	BannerHoverFrame.Visible = false
+	BannerHoverFrame.ZIndex = 3
 
-	local EditBannerBtnCorner = Instance.new("UICorner")
-	EditBannerBtnCorner.CornerRadius = UDim.new(0, 3)
-	EditBannerBtnCorner.Parent = EditBannerBtn
+	local ChangeBannerText = Instance.new("TextLabel")
+	Elements.ChangeBannerText = ChangeBannerText
+	ChangeBannerText.Name = "ChangeBannerText"
+	ChangeBannerText.Parent = BannerHoverFrame
+	ChangeBannerText.BackgroundTransparency = 1.000
+	ChangeBannerText.Size = UDim2.new(1, 0, 1, 0)
+	ChangeBannerText.Font = Enum.Font.GothamBold
+	ChangeBannerText.Text = GetTranslation("account_changeBannerHover")
+	ChangeBannerText.TextColor3 = Color3.fromRGB(255, 255, 255)
+	ChangeBannerText.TextSize = 11.000
+	ChangeBannerText.TextWrapped = true
+	ChangeBannerText.TextYAlignment = Enum.TextYAlignment.Center
+
+	local BannerClickArea = Instance.new("TextButton")
+	Elements.BannerClickArea = BannerClickArea
+	BannerClickArea.Name = "BannerClickArea"
+	BannerClickArea.Parent = UserSettingsCard
+	BannerClickArea.Size = UserBannerImage.Size
+	BannerClickArea.Position = UserBannerImage.Position
+	BannerClickArea.BackgroundTransparency = 1
+	BannerClickArea.Text = ""
+	BannerClickArea.AutoButtonColor = false
+	BannerClickArea.ZIndex = 2
 
 	local UserPanelContentContainer = Instance.new("Frame")
 	Elements.UserPanelContentContainer = UserPanelContentContainer
@@ -2398,8 +2481,9 @@ function DiscordLib:Window(text)
 			local appearancePanel = Elements.AppearancePanel
 			local languagePanel = Elements.LanguagePanel
 			local currentSettingOpenText = Elements.CurrentSettingOpen
+			local serversHoldFrame = Elements.ServersHoldFrame
 
-			if not (settingsFrame and userPanel and appearancePanel and languagePanel and currentSettingOpenText) then
+			if not (settingsFrame and userPanel and appearancePanel and languagePanel and currentSettingOpenText and serversHoldFrame) then
 				settingsopened = false
 				return
 			end
@@ -2408,6 +2492,8 @@ function DiscordLib:Window(text)
 			settingsFrame.BackgroundTransparency = 1
 			TweenService:Create(settingsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.7}):Play()
 
+			serversHoldFrame.Visible = false
+
 			userPanel.Visible = true
 			appearancePanel.Visible = false
 			languagePanel.Visible = false
@@ -2415,18 +2501,23 @@ function DiscordLib:Window(text)
 			ApplyTheme(currentThemeName, false)
 			ApplyLanguage(false)
 		end)
+
 	end
 
 	local function CloseSettings()
 		if not settingsopened then return end
 		settingsopened = false
 		local settingsFrame = Elements.SettingsFrame
+		local serversHoldFrame = Elements.ServersHoldFrame
+
 		if settingsFrame then
 			TweenService:Create(settingsFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
 			task.wait(0.3)
 			if settingsFrame then settingsFrame.Visible = false end
+			if serversHoldFrame then serversHoldFrame.Visible = true end
 		end
 	end
+
 
 	if Elements.CloseSettingsBtn then Elements.CloseSettingsBtn.MouseButton1Click:Connect(CloseSettings) end
 
@@ -2540,10 +2631,11 @@ function DiscordLib:Window(text)
 		Elements.EditBtn.MouseLeave:Connect(function() TweenService:Create(Elements.EditBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground}):Play() end)
 	end
 
-	if Elements.EditBannerBtn then
-		Elements.EditBannerBtn.MouseEnter:Connect(function() TweenService:Create(Elements.EditBannerBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryHover}):Play() end)
-		Elements.EditBannerBtn.MouseLeave:Connect(function() TweenService:Create(Elements.EditBannerBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground}):Play() end)
+	if Elements.BannerClickArea and Elements.BannerHoverFrame then
+		Elements.BannerClickArea.MouseEnter:Connect(function() if Elements.BannerHoverFrame then Elements.BannerHoverFrame.Visible = true end end)
+		Elements.BannerClickArea.MouseLeave:Connect(function() if Elements.BannerHoverFrame then Elements.BannerHoverFrame.Visible = false end end)
 	end
+
 
 	if Elements.UserPanelUserIcon and Elements.BlackFrame then
 		Elements.UserPanelUserIcon.MouseEnter:Connect(function() if Elements.BlackFrame then Elements.BlackFrame.Visible = true end end)
@@ -3008,8 +3100,8 @@ function DiscordLib:Window(text)
 		end)
 	end
 
-	if Elements.EditBannerBtn then
-		Elements.EditBannerBtn.MouseButton1Click:Connect(CreateBannerChangePopup)
+	if Elements.BannerClickArea then
+		Elements.BannerClickArea.MouseButton1Click:Connect(CreateBannerChangePopup)
 	end
 
 	if Elements.EditBtn then
@@ -3313,6 +3405,21 @@ function DiscordLib:Window(text)
 	function ServerHold:Server(text, img)
 		local fc = false
 		local serverId = text .. "Server_" .. HttpService:GenerateGUID(false):sub(1,4)
+		local serverData = {
+			isResizing = false,
+			dragStartX = 0,
+			initialChannelWidth = 0,
+			initialUserpadWidth = 0,
+			initialContentWidth = 0,
+			minChannelWidth = 90,
+			maxChannelWidth = 200,
+			separatorWidth = 4,
+			inputChangedConn = nil,
+			inputEndedConn = nil,
+		}
+		local initialChannelWidthPixels = math.min(240, serverData.maxChannelWidth)
+		Elements.Userpad.Size = UDim2.new(0, initialChannelWidthPixels, 0, Elements.Userpad.Size.Y.Offset) -- hack so it works like intented 
+		Elements.ServerData[serverId] = serverData
 
 		local ServerFrame = Instance.new("Frame")
 		Elements[serverId.."Frame"] = ServerFrame
@@ -3373,8 +3480,9 @@ function DiscordLib:Window(text)
 		ChannelListFrame.Name = "ChannelListFrame"
 		ChannelListFrame.BorderSizePixel = 0
 		ChannelListFrame.Position = UDim2.new(0, 0, 0, 0)
-		ChannelListFrame.Size = UDim2.new(0, 240, 1, 0)
+		ChannelListFrame.Size = UDim2.new(0, initialChannelWidthPixels, 1, 0)
 		ChannelListFrame.Parent = ServerFrame
+		ChannelListFrame.ClipsDescendants = true
 
 		local ServerTitleFrame = Instance.new("Frame")
 		ServerTitleFrame.Name = "ServerTitleFrame"
@@ -3430,11 +3538,22 @@ function DiscordLib:Window(text)
 		ServerChannelHolderPadding.PaddingRight = UDim.new(0, 8)
 		ServerChannelHolderPadding.Parent = ServerChannelHolder
 
+		local ResizeSeparator = Instance.new("Frame")
+		ResizeSeparator.Name = "ResizeSeparator"
+		ResizeSeparator.Parent = ServerFrame
+		ResizeSeparator.BackgroundColor3 = CurrentTheme.ResizeSeparatorColor
+		ResizeSeparator.BorderSizePixel = 0
+		ResizeSeparator.Size = UDim2.new(0, serverData.separatorWidth, 1, 0)
+		ResizeSeparator.Position = UDim2.new(0, initialChannelWidthPixels, 0, 0)
+		ResizeSeparator.ZIndex = 5
+		ResizeSeparator.Active = true
+
+		local contentAreaXOffset = initialChannelWidthPixels + serverData.separatorWidth
 		local ContentAreaFrame = Instance.new("Frame")
 		ContentAreaFrame.Name = "ContentAreaFrame"
 		ContentAreaFrame.BorderSizePixel = 0
-		ContentAreaFrame.Position = UDim2.new(0, 240, 0, 0)
-		ContentAreaFrame.Size = UDim2.new(1, -240, 1, 0)
+		ContentAreaFrame.Position = UDim2.new(0, contentAreaXOffset, 0, 0)
+		ContentAreaFrame.Size = UDim2.new(1, -contentAreaXOffset, 1, 0)
 		ContentAreaFrame.ClipsDescendants = true
 		ContentAreaFrame.Parent = ServerFrame
 
@@ -3485,6 +3604,64 @@ function DiscordLib:Window(text)
 
 		Elements[serverId.."_ChannelContentFrame"] = ChannelContentFrame
 
+		local resizeInputBeganConn = ResizeSeparator.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				serverData.isResizing = true
+				serverData.dragStartX = input.Position.X
+				serverData.initialChannelWidth = ChannelListFrame.AbsoluteSize.X
+				serverData.initialUserpadWidth = Elements.Userpad.AbsoluteSize.X
+
+				if serverData.inputChangedConn then serverData.inputChangedConn:Disconnect() serverData.inputChangedConn = nil end
+				if serverData.inputEndedConn then serverData.inputEndedConn:Disconnect() serverData.inputEndedConn = nil end
+
+				serverData.inputChangedConn = UserInputService.InputChanged:Connect(function(inputChanged)
+					if serverData.isResizing and (inputChanged.UserInputType == Enum.UserInputType.MouseMovement or inputChanged.UserInputType == Enum.UserInputType.Touch) then
+						local deltaX = inputChanged.Position.X - serverData.dragStartX
+						local newChannelWidth = serverData.initialChannelWidth + deltaX
+
+						newChannelWidth = math.clamp(newChannelWidth, serverData.minChannelWidth, serverData.maxChannelWidth)
+						local newContentWidth = ServerFrame.AbsoluteSize.X - newChannelWidth - serverData.separatorWidth
+						if newContentWidth < 50 then
+							newChannelWidth = ServerFrame.AbsoluteSize.X - 50 - serverData.separatorWidth
+						end
+						newChannelWidth = math.clamp(newChannelWidth, serverData.minChannelWidth, serverData.maxChannelWidth)
+
+						ChannelListFrame.Size = UDim2.new(0, newChannelWidth, 1, 0)
+						ResizeSeparator.Position = UDim2.new(0, newChannelWidth, 0, 0)
+
+						ContentAreaFrame.Position = UDim2.new(0, newChannelWidth + serverData.separatorWidth, 0, 0)
+						ContentAreaFrame.Size = UDim2.new(1, -(newChannelWidth + serverData.separatorWidth), 1, 0)
+
+						if Elements.Userpad then
+							Elements.Userpad.Size = UDim2.new(0, newChannelWidth, 0, Elements.Userpad.Size.Y.Offset)
+							if Elements.UserName then
+								local leftSpace = (Elements.UserIconButton and Elements.UserIconButton.AbsoluteSize.X + 8) or 40
+								local rightSpace = (SettingsOpenBtn and SettingsOpenBtn.AbsoluteSize.X + 8) or 32
+								local availableNameWidth = newChannelWidth - leftSpace - rightSpace
+								Elements.UserName.Size = UDim2.new(0, math.max(0, availableNameWidth), 0, Elements.UserName.Size.Y.Offset)
+							end
+						end
+
+						UpdateChannelTextTruncation(ChannelListFrame, ServerChannelHolder)
+					end
+				end)
+
+				serverData.inputEndedConn = UserInputService.InputEnded:Connect(function(inputEnded)
+					if serverData.isResizing and inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
+						serverData.isResizing = false
+						if serverData.inputChangedConn then serverData.inputChangedConn:Disconnect(); serverData.inputChangedConn = nil end
+						if serverData.inputEndedConn then serverData.inputEndedConn:Disconnect(); serverData.inputEndedConn = nil end
+						UpdateChannelTextTruncation(ChannelListFrame, ServerChannelHolder)
+					end
+				end)
+			end
+		end)
+		DiscordLib.resizeConnections[ResizeSeparator] = {
+			InputBegan = resizeInputBeganConn,
+			InputChanged = serverData.inputChangedConn,
+			InputEnded = serverData.inputEndedConn
+		}
+
 		if Elements.ServersHold and ServersHoldLayout and ServersHoldPadding then
 			task.wait()
 			Elements.ServersHold.CanvasSize = UDim2.new(0, 0, 0, ServersHoldLayout.AbsoluteContentSize.Y + ServersHoldPadding.PaddingTop.Offset)
@@ -3525,7 +3702,10 @@ function DiscordLib:Window(text)
 				end
 			end
 			currentservertoggled = serverId
-			if ServerFrame then ServerFrame.Visible = true end
+			if ServerFrame then
+				ServerFrame.Visible = true
+				UpdateChannelTextTruncation(ChannelListFrame, ServerChannelHolder)
+			end
 			TweenService:Create(ServerButton, TweenInfo.new(0.15), {BackgroundColor3 = CurrentTheme.ServerButtonActive}):Play()
 			local corner = ServerButton:FindFirstChild("ServerCorner")
 			if corner then TweenService:Create(corner, TweenInfo.new(0.15), {CornerRadius = UDim.new(0, 15)}):Play() end
@@ -3551,6 +3731,8 @@ function DiscordLib:Window(text)
 			currentservertoggled = serverId
 			ApplyTheme(currentThemeName, true)
 			ApplyLanguage(true)
+			task.wait(0.1)
+			UpdateChannelTextTruncation(ChannelListFrame, ServerChannelHolder)
 		end
 
 		local ChannelHold = {}
@@ -3567,6 +3749,7 @@ function DiscordLib:Window(text)
 			ChannelBtn.AutoButtonColor = false
 			ChannelBtn.Font = Enum.Font.SourceSans
 			ChannelBtn.Text = ""
+			ChannelBtn.TextTruncate = Enum.TextTruncate.AtEnd
 			ChannelBtn.BackgroundTransparency = 1.000
 
 			local ChannelBtnCorner = Instance.new("UICorner")
@@ -3596,12 +3779,14 @@ function DiscordLib:Window(text)
 			local ChannelBtnTitle = Instance.new("TextLabel")
 			ChannelBtnTitle.Name = "ChannelBtnTitle"
 			ChannelBtnTitle.BackgroundTransparency = 1.000
-			ChannelBtnTitle.Size = UDim2.new(1, -30, 1, 0)
+			ChannelBtnTitle.Size = UDim2.new(1, -(ChannelBtnHashtag.Size.X.Offset + ChannelBtnLayout.Padding.Offset + ChannelBtnPadding.PaddingLeft.Offset + 8), 1, 0)
 			ChannelBtnTitle.Font = Enum.Font.GothamMedium
 			ChannelBtnTitle.Text = channelName
 			ChannelBtnTitle.TextSize = 14.000
 			ChannelBtnTitle.TextXAlignment = Enum.TextXAlignment.Left
+			ChannelBtnTitle.TextTruncate = Enum.TextTruncate.None
 			ChannelBtnTitle.Parent = ChannelBtn
+			ChannelBtnTitle:SetAttribute("FullText", channelName)
 
 			local ChannelHolder = Instance.new("ScrollingFrame")
 			ChannelHolder.Name = channelHolderName
@@ -3631,6 +3816,7 @@ function DiscordLib:Window(text)
 			ChannelHolderPadding.PaddingLeft = UDim.new(0, 8)
 			ChannelHolderPadding.PaddingRight = UDim.new(0, 8)
 			ChannelHolderPadding.Parent = ChannelHolder
+
 			ChannelBtn.MouseEnter:Connect(function()
 				if Elements[serverId.."_ActiveChannelId"] ~= channelId then
 					TweenService:Create(ChannelBtn, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ChannelButtonHover}):Play()
@@ -3658,7 +3844,7 @@ function DiscordLib:Window(text)
 						if oldHash then TweenService:Create(oldHash, TweenInfo.new(0.1), {TextColor3 = CurrentTheme.InteractiveNormal}):Play() end
 					end
 					local oldChannelName = ""
-					if oldBtn then oldChannelName = oldBtn:FindFirstChild("ChannelBtnTitle").Text end
+					if oldBtn then oldChannelName = oldBtn:FindFirstChild("ChannelBtnTitle"):GetAttribute("FullText") end
 					local oldHolder = ChannelContentFrame:FindFirstChild(oldChannelName.."_Holder")
 					if oldHolder then oldHolder.Visible = false end
 				end
@@ -3678,6 +3864,8 @@ function DiscordLib:Window(text)
 			if ServerChannelHolder and ServerChannelHolderLayout and ServerChannelHolderPadding then
 				ServerChannelHolder.CanvasSize = UDim2.new(0, 0, 0, ServerChannelHolderLayout.AbsoluteContentSize.Y + ServerChannelHolderPadding.PaddingTop.Offset + ServerChannelHolderPadding.PaddingBottom.Offset)
 			end
+			UpdateChannelTextTruncation(ChannelListFrame, ServerChannelHolder)
+
 
 			if fc == false then
 				fc = true
