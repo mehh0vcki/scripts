@@ -12,9 +12,12 @@ local Mouse = LocalPlayer:GetMouse()
 local userinfo = {}
 local DEFAULT_PFP = "https://www.roblox.com/headshot-thumbnail/image?userId=".. (LocalPlayer and LocalPlayer.UserId or 0) .."&width=420&height=420&format=png"
 local DEFAULT_USER = (LocalPlayer and LocalPlayer.Name or "User")
+local DEFAULT_BANNER = "rbxassetid://0"
 local DEFAULT_THEME = "Dark"
 local DEFAULT_STATUS = "status_online"
 local DEFAULT_LANGUAGE = "en"
+
+local banner
 
 pcall(function()
 	if readfile then
@@ -23,6 +26,7 @@ pcall(function()
 			local decodeSuccess, decodedData = pcall(HttpService.JSONDecode, HttpService, data)
 			if decodeSuccess then
 				userinfo = decodedData
+				banner = userinfo["banner"] or DEFAULT_BANNER
 			else
 				warn("DiscordLib: Failed to decode discordlibinfo.txt:", decodedData)
 			end
@@ -34,6 +38,7 @@ end)
 
 local pfp = userinfo["pfp"] or DEFAULT_PFP
 local user = userinfo["user"] or DEFAULT_USER
+banner = userinfo["banner"] or DEFAULT_BANNER
 local currentThemeName = userinfo["theme"] or DEFAULT_THEME
 local currentUserStatus = userinfo["status"] or DEFAULT_STATUS
 local currentLanguage = userinfo["language"] or DEFAULT_LANGUAGE
@@ -44,8 +49,8 @@ local Languages = {
 		settings_myAccount = "My Account",
 		settings_appearance = "Appearance",
 		settings_language = "Language",
-		settings_discordInfo = "Stable 1.0.1 (00002)\nHost 1.0.0\nRoblox Luau Engine",
-		settings_escHint = "ESC",
+		settings_discordInfo = "Stable 1.0.2 (00003)\nHost 1.0.0\nRoblox Luau Engine",
+		settings_escHint = "LALT",
 
 		header_myAccount = "MY ACCOUNT",
 		header_appearance = "APPEARANCE",
@@ -54,6 +59,7 @@ local Languages = {
 		account_changeAvatarHover = "CHANGE\nAVATAR",
 		account_usernameLabel = "USERNAME",
 		account_editButton = "Edit",
+		account_editBannerButton = "Edit Banner",
 
 		appearance_desc = "Adjust the color of the interface for better visibility.",
 
@@ -69,6 +75,12 @@ local Languages = {
 		popup_changeAvatarPlaceholder = "rbxassetid://...",
 		popup_changeAvatarErrorInvalid = "Invalid Image ID or URL.",
 		popup_changeAvatarErrorTitle = "Avatar Error",
+
+		popup_changeBannerTitle = "Change profile banner",
+		popup_changeBannerDesc = "Enter a Roblox image URL or Asset ID (e.g., rbxassetid://...).",
+		popup_changeBannerPlaceholder = "rbxassetid://... or https://...",
+		popup_changeBannerErrorInvalid = "Invalid Image ID or URL.",
+		popup_changeBannerErrorTitle = "Banner Error",
 
 		popup_changeUsernameTitle = "Change your username",
 		popup_changeUsernameDesc = "Enter your new username.",
@@ -87,7 +99,7 @@ local Languages = {
 		settings_myAccount = "Mi Cuenta",
 		settings_appearance = "Apariencia",
 		settings_language = "Idioma",
-		settings_escHint = "ESC",
+		settings_escHint = "LALT",
 
 		header_myAccount = "MI CUENTA",
 		header_appearance = "APARIENCIA",
@@ -96,6 +108,7 @@ local Languages = {
 		account_changeAvatarHover = "CAMBIAR\nAVATAR",
 		account_usernameLabel = "NOMBRE DE USUARIO",
 		account_editButton = "Editar",
+		account_editBannerButton = "Editar Banner",
 
 		appearance_desc = "Ajusta el color de la interfaz para una mejor visibilidad.",
 
@@ -111,6 +124,12 @@ local Languages = {
 		popup_changeAvatarPlaceholder = "rbxassetid://...",
 		popup_changeAvatarErrorInvalid = "ID o URL de imagen inválida.",
 		popup_changeAvatarErrorTitle = "Error de Avatar",
+
+		popup_changeBannerTitle = "Cambiar banner de perfil",
+		popup_changeBannerDesc = "Introduce una URL o ID de activo de imagen de Roblox (ej., rbxassetid://...).",
+		popup_changeBannerPlaceholder = "rbxassetid://... o https://...",
+		popup_changeBannerErrorInvalid = "ID o URL de imagen inválida.",
+		popup_changeBannerErrorTitle = "Error de Banner",
 
 		popup_changeUsernameTitle = "Cambiar tu nombre de usuario",
 		popup_changeUsernameDesc = "Introduce tu nuevo nombre de usuario.",
@@ -129,7 +148,7 @@ local Languages = {
 		settings_myAccount = "Моя Учетная Запись",
 		settings_appearance = "Внешний Вид",
 		settings_language = "Язык",
-		settings_escHint = "ESC",
+		settings_escHint = "LALT",
 
 		header_myAccount = "МОЯ УЧЕТНАЯ ЗАПИСЬ",
 		header_appearance = "ВНЕШНИЙ ВИД",
@@ -138,6 +157,7 @@ local Languages = {
 		account_changeAvatarHover = "СМЕНИТЬ\nАВАТАР",
 		account_usernameLabel = "ИМЯ ПОЛЬЗОВАТЕЛЯ",
 		account_editButton = "Изменить",
+		account_editBannerButton = "Изменить баннер",
 
 		appearance_desc = "Настройте цвет интерфейса для лучшей видимости.",
 
@@ -153,6 +173,12 @@ local Languages = {
 		popup_changeAvatarPlaceholder = "rbxassetid://...",
 		popup_changeAvatarErrorInvalid = "Неверный ID изображения или URL.",
 		popup_changeAvatarErrorTitle = "Ошибка Аватара",
+
+		popup_changeBannerTitle = "Изменить баннер профиля",
+		popup_changeBannerDesc = "Введите URL или ID изображения Roblox (например, rbxassetid://...).",
+		popup_changeBannerPlaceholder = "rbxassetid://... или https://...",
+		popup_changeBannerErrorInvalid = "Неверный ID изображения или URL.",
+		popup_changeBannerErrorTitle = "Ошибка Баннера",
 
 		popup_changeUsernameTitle = "Сменить ваше имя пользователя",
 		popup_changeUsernameDesc = "Введите ваше новое имя пользователя.",
@@ -177,6 +203,7 @@ end
 local function SaveInfo()
 	userinfo["pfp"] = pfp
 	userinfo["user"] = user
+	userinfo["banner"] = banner
 	userinfo["theme"] = currentThemeName
 	userinfo["status"] = currentUserStatus
 	userinfo["language"] = currentLanguage
@@ -512,6 +539,7 @@ function DiscordLib:Window(text)
 		if Elements.ChangeAvatarText then Elements.ChangeAvatarText.Text = GetTranslation("account_changeAvatarHover") end
 		if Elements.UsernameTextLabel then Elements.UsernameTextLabel.Text = GetTranslation("account_usernameLabel") end
 		if Elements.EditBtn then Elements.EditBtn.Text = GetTranslation("account_editButton") end
+		if Elements.EditBannerBtn then Elements.EditBannerBtn.Text = GetTranslation("account_editBannerButton") end
 
 		if Elements.AppearanceDesc then Elements.AppearanceDesc.Text = GetTranslation("appearance_desc") end
 
@@ -540,6 +568,18 @@ function DiscordLib:Window(text)
 					if resetBtn then resetBtn.Text = GetTranslation("popup_resetButton") end
 					if closeBtn1 then closeBtn1.Text = GetTranslation("popup_cancelButton") end
 				end
+			elseif popupName == "BannerChangePopup" then
+				if text1 then text1.Text = GetTranslation("popup_changeBannerTitle") end
+				if text2 then text2.Text = GetTranslation("popup_changeBannerDesc") end
+				if textbox then textbox.PlaceholderText = GetTranslation("popup_changeBannerPlaceholder") end
+				if underBar then
+					local changeBtn = underBar:FindFirstChild("ChangeBtn")
+					local resetBtn = underBar:FindFirstChild("ResetBtn")
+					local closeBtn1 = underBar:FindFirstChild("CloseBtn1")
+					if changeBtn then changeBtn.Text = GetTranslation("popup_changeButton") end
+					if resetBtn then resetBtn.Text = GetTranslation("popup_resetButton") end
+					if closeBtn1 then closeBtn1.Text = GetTranslation("popup_cancelButton") end
+				end
 			elseif popupName == "UserChangePopup" then
 				if text1 then text1.Text = GetTranslation("popup_changeUsernameTitle") end
 				if text2 then text2.Text = GetTranslation("popup_changeUsernameDesc") end
@@ -559,6 +599,7 @@ function DiscordLib:Window(text)
 		end
 
 		updatePopupTexts("AvatarChangePopup", "AvatarChangeHolder")
+		updatePopupTexts("BannerChangePopup", "BannerChangeHolder")
 		updatePopupTexts("UserChangePopup", "UserChangeHolder")
 		updatePopupTexts("Notification", "NotificationHolderMain")
 
@@ -608,7 +649,7 @@ function DiscordLib:Window(text)
 		end
 
 		local mainFrame = Elements.MainFrame
-		if not mainFrame then warn("ApplyTheme: MainFrame not found in Elements table!") return end
+		if not mainFrame then return end
 
 		tweenColor(mainFrame, "BackgroundColor3", CurrentTheme.MainBackground)
 
@@ -766,26 +807,40 @@ function DiscordLib:Window(text)
 						local userSettingsCard = Elements.UserSettingsCard
 						if userSettingsCard then
 							tweenColor(userSettingsCard, "BackgroundColor3", CurrentTheme.SettingsUserPanelBackground)
-							local userPanelUserIcon = Elements.UserPanelUserIcon
-							if userPanelUserIcon then
-								local userPanelUserCircle = Elements.UserPanelUserCircle
-								if userPanelUserCircle then tweenColor(userPanelUserCircle, "ImageColor3", CurrentTheme.SettingsUserPanelBackground) end
-								local blackFrame = Elements.BlackFrame
-								if blackFrame then
-									local changeAvatarText = blackFrame:FindFirstChild("ChangeAvatarText")
-									if changeAvatarText then tweenColor(changeAvatarText, "TextColor3", Color3.new(1,1,1)) end
-								end
 
-								local settingsStatusIndicator = Elements.SettingsStatusIndicator
-								if settingsStatusIndicator then
-									local statusDisplayName = GetTranslation(currentUserStatus)
-									local statusKey = "Status" .. statusDisplayName:gsub(" ", "")
-									tweenColor(settingsStatusIndicator, "BackgroundColor3", CurrentTheme[statusKey] or CurrentTheme.StatusInvisible)
-									tweenColor(settingsStatusIndicator, "BorderColor3", CurrentTheme.SettingsUserPanelBackground)
-								end
+							local userBannerImage = Elements.UserBannerImage
+							if userBannerImage then
+								userBannerImage.Image = banner
 							end
-							local userPanelUserText = Elements.UserPanelUser
-							if userPanelUserText then tweenColor(userPanelUserText, "TextColor3", CurrentTheme.HeaderText) end
+
+							local editBannerBtn = Elements.EditBannerBtn
+							if editBannerBtn then
+								tweenColor(editBannerBtn, "BackgroundColor3", CurrentTheme.ButtonSecondaryBackground)
+								tweenColor(editBannerBtn, "TextColor3", CurrentTheme.ButtonText)
+							end
+
+							local userPanelContentContainer = Elements.UserPanelContentContainer
+							if userPanelContentContainer then
+
+								local userPanelUserIcon = Elements.UserPanelUserIcon
+								if userPanelUserIcon then
+									local blackFrame = Elements.BlackFrame
+									if blackFrame then
+										local changeAvatarText = blackFrame:FindFirstChild("ChangeAvatarText")
+										if changeAvatarText then tweenColor(changeAvatarText, "TextColor3", Color3.new(1,1,1)) end
+									end
+
+									local settingsStatusIndicator = Elements.SettingsStatusIndicator
+									if settingsStatusIndicator then
+										local statusDisplayName = GetTranslation(currentUserStatus)
+										local statusKey = "Status" .. statusDisplayName:gsub(" ", "")
+										tweenColor(settingsStatusIndicator, "BackgroundColor3", CurrentTheme[statusKey] or CurrentTheme.StatusInvisible)
+										tweenColor(settingsStatusIndicator, "BorderColor3", CurrentTheme.SettingsUserPanelBackground)
+									end
+								end
+								local userPanelUserText = Elements.UserPanelUser
+								if userPanelUserText then tweenColor(userPanelUserText, "TextColor3", CurrentTheme.HeaderText) end
+							end
 						end
 
 						local userSettingsPad = Elements.UserSettingsPad
@@ -1067,6 +1122,7 @@ function DiscordLib:Window(text)
 
 		themePopup("Notification", "NotificationHolderMain")
 		themePopup("AvatarChangePopup", "AvatarChangeHolder")
+		themePopup("BannerChangePopup", "BannerChangeHolder")
 		themePopup("UserChangePopup", "UserChangeHolder")
 
 		if Elements.StatusIndicator then
@@ -1121,22 +1177,17 @@ function DiscordLib:Window(text)
 	end
 
 	local function CreateCornerNotification(titletext, desctext)
-		if Elements.CornerNotification and Elements.CornerNotification.Parent then
-			Elements.CornerNotification:Destroy()
-			Elements.CornerNotification = nil
-		end
-
 		local notifWidth = 280
 		local notifHeight = 80
 		local padding = 15
-		local autoDismissDelay = 5
 
 		local CornerNotifFrame = Instance.new("Frame")
-		Elements.CornerNotification = CornerNotifFrame
+		Elements.CornerNotifications[#Elements.CornerNotifications + 1] = CornerNotifFrame
 		CornerNotifFrame.Name = "CornerNotification"
 		CornerNotifFrame.Parent = Discord
 		CornerNotifFrame.AnchorPoint = Vector2.new(1, 1)
-		CornerNotifFrame.Position = UDim2.new(1, padding + notifWidth, 1, -padding)
+		local verticalOffset = -padding - (notifHeight * (#Elements.CornerNotifications -1)) - (padding * (#Elements.CornerNotifications - 1))
+		CornerNotifFrame.Position = UDim2.new(1, -padding - notifWidth, 1, verticalOffset)
 		CornerNotifFrame.Size = UDim2.new(0, notifWidth, 0, notifHeight)
 		CornerNotifFrame.BackgroundColor3 = CurrentTheme.TooltipBackground
 		CornerNotifFrame.BackgroundTransparency = 0.1
@@ -1194,31 +1245,43 @@ function DiscordLib:Window(text)
 
 		local function dismissNotification(animate)
 			if CornerNotifFrame and CornerNotifFrame.Parent then
-				if Elements.CornerNotification == CornerNotifFrame then
-					Elements.CornerNotification = nil
+				for i, frame in ipairs(Elements.CornerNotifications) do
+					if frame == CornerNotifFrame then
+						table.remove(Elements.CornerNotifications, i)
+						break
+					end
 				end
+
 				if animate then
 					TweenService:Create(CornerNotifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-						Position = UDim2.new(1, padding + notifWidth, 1, -padding)
+						Position = UDim2.new(0, -notifWidth, 1, -padding),
+						BackgroundTransparency = 1
 					}):Play()
 					task.wait(0.3)
 					if CornerNotifFrame and CornerNotifFrame.Parent then CornerNotifFrame:Destroy() end
 				else
+					CornerNotifFrame.BackgroundTransparency = 1
 					CornerNotifFrame:Destroy()
+				end
+
+				for i, frame in ipairs(Elements.CornerNotifications) do
+					if frame and frame.Parent then
+						local newYOffset = -padding - (notifHeight * (i - 1)) - (padding * (i - 1))
+					end
 				end
 			end
 		end
-
+		
 		CloseNotifBtn.MouseButton1Click:Connect(function() dismissNotification(true) end)
 		CloseNotifBtn.MouseEnter:Connect(function() CloseNotifBtn.ImageColor3 = CurrentTheme.IconHoverColor end)
 		CloseNotifBtn.MouseLeave:Connect(function() CloseNotifBtn.ImageColor3 = CurrentTheme.IconMuted end)
 
 		TweenService:Create(CornerNotifFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Position = UDim2.new(1, -padding, 1, -padding)
+			Position = UDim2.new(1, -padding, 1, verticalOffset)
 		}):Play()
 
-		task.delay(autoDismissDelay, function()
-			if CornerNotifFrame and CornerNotifFrame.Parent and Elements.CornerNotification == CornerNotifFrame then
+		task.delay(5, function()
+			if CornerNotifFrame and CornerNotifFrame.Parent then
 				dismissNotification(true)
 			end
 		end)
@@ -1711,25 +1774,70 @@ function DiscordLib:Window(text)
 	Elements.UserSettingsCard = UserSettingsCard
 	UserSettingsCard.Name = "UserSettingsCard"
 	UserSettingsCard.Parent = UserPanel
+	UserSettingsCard.BackgroundColor3 = CurrentTheme.SettingsUserPanelBackground
 	UserSettingsCard.BorderSizePixel = 0
 	UserSettingsCard.Position = UDim2.new(0, 0, 0, 40)
 	UserSettingsCard.Size = UDim2.new(1, 0, 0, 100)
+	UserSettingsCard.ClipsDescendants = true
 
 	local UserSettingsCardCorner = Instance.new("UICorner")
 	UserSettingsCardCorner.CornerRadius = UDim.new(0, 8)
 	UserSettingsCardCorner.Parent = UserSettingsCard
 
+	local UserBannerImage = Instance.new("ImageLabel")
+	Elements.UserBannerImage = UserBannerImage
+	UserBannerImage.Name = "UserBannerImage"
+	UserBannerImage.Parent = UserSettingsCard
+	UserBannerImage.BorderSizePixel = 0
+	UserBannerImage.Position = UDim2.new(0, 0, 0, 0)
+	UserBannerImage.Size = UDim2.new(1, 0, 0, 60)
+	UserBannerImage.ZIndex = 1
+	UserBannerImage.ScaleType = Enum.ScaleType.Crop
+	UserBannerImage.Image = banner
+	UserBannerImage.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	UserBannerImage.ImageTransparency = 0
+	UserBannerImage.ClipsDescendants = true
+	UserBannerImage.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+	UserBannerImage.BackgroundTransparency = 0
+
+	local EditBannerBtn = Instance.new("TextButton")
+	Elements.EditBannerBtn = EditBannerBtn
+	EditBannerBtn.Name = "EditBannerBtn"
+	EditBannerBtn.Parent = UserSettingsCard
+	EditBannerBtn.AnchorPoint = Vector2.new(1, 0)
+	EditBannerBtn.Position = UDim2.new(1, -10, 0, 10)
+	EditBannerBtn.Size = UDim2.new(0, 85, 0, 24)
+	EditBannerBtn.Font = Enum.Font.GothamMedium
+	EditBannerBtn.Text = GetTranslation("account_editBannerButton")
+	EditBannerBtn.TextSize = 11.000
+	EditBannerBtn.AutoButtonColor = false
+	EditBannerBtn.ZIndex = 3
+
+	local EditBannerBtnCorner = Instance.new("UICorner")
+	EditBannerBtnCorner.CornerRadius = UDim.new(0, 3)
+	EditBannerBtnCorner.Parent = EditBannerBtn
+
+	local UserPanelContentContainer = Instance.new("Frame")
+	Elements.UserPanelContentContainer = UserPanelContentContainer
+	UserPanelContentContainer.Name = "UserPanelContentContainer"
+	UserPanelContentContainer.Parent = UserSettingsCard
+	UserPanelContentContainer.BackgroundTransparency = 1
+	UserPanelContentContainer.BorderSizePixel = 0
+	UserPanelContentContainer.Position = UDim2.new(0,0,0,0)
+	UserPanelContentContainer.Size = UDim2.new(1,0,1,0)
+	UserPanelContentContainer.ZIndex = 2
+
 	local UserPanelUserIcon = Instance.new("TextButton")
 	Elements.UserPanelUserIcon = UserPanelUserIcon
 	UserPanelUserIcon.Name = "UserPanelUserIcon"
-	UserPanelUserIcon.Parent = UserSettingsCard
+	UserPanelUserIcon.Parent = UserPanelContentContainer
 	UserPanelUserIcon.BackgroundTransparency = 1
 	UserPanelUserIcon.BorderSizePixel = 0
 	UserPanelUserIcon.Position = UDim2.new(0, 20, 0, 15)
 	UserPanelUserIcon.Size = UDim2.new(0, 70, 0, 70)
 	UserPanelUserIcon.AutoButtonColor = false
 	UserPanelUserIcon.Text = ""
-	UserPanelUserIcon.ZIndex = 2
+	UserPanelUserIcon.ZIndex = UserPanelContentContainer.ZIndex + 1
 
 	local UserPanelUserImage = Instance.new("ImageLabel")
 	Elements.UserPanelUserImage = UserPanelUserImage
@@ -1738,18 +1846,12 @@ function DiscordLib:Window(text)
 	UserPanelUserImage.BackgroundTransparency = 1.000
 	UserPanelUserImage.Size = UDim2.new(1, 0, 1, 0)
 	UserPanelUserImage.Image = pfp
-	UserPanelUserImage.ZIndex = 1
+	UserPanelUserImage.ZIndex = UserPanelUserIcon.ZIndex + 1
 
-	local UserPanelUserCircle = Instance.new("ImageLabel")
-	Elements.UserPanelUserCircle = UserPanelUserCircle
-	UserPanelUserCircle.Name = "UserPanelUserCircle"
-	UserPanelUserCircle.Parent = UserPanelUserImage
-	UserPanelUserCircle.BackgroundTransparency = 1.000
-	UserPanelUserCircle.Size = UDim2.new(1, 0, 1, 0)
-	UserPanelUserCircle.Image = "rbxassetid://4031889928"
-	UserPanelUserCircle.ScaleType = Enum.ScaleType.Slice
-	UserPanelUserCircle.SliceCenter = Rect.new(100, 100, 100, 100)
-	UserPanelUserCircle.ZIndex = UserPanelUserImage.ZIndex + 1
+	local UserPanelUserCorner = Instance.new("UICorner")
+	UserPanelUserCorner.Name = "UserPanelUserCorner"
+	UserPanelUserCorner.Parent = UserPanelUserImage
+	UserPanelUserCorner.CornerRadius = UDim.new(1, 0)
 
 	local BlackFrame = Instance.new("Frame")
 	Elements.BlackFrame = BlackFrame
@@ -1760,7 +1862,7 @@ function DiscordLib:Window(text)
 	BlackFrame.BorderSizePixel = 0
 	BlackFrame.Size = UDim2.new(1, 0, 1, 0)
 	BlackFrame.Visible = false
-	BlackFrame.ZIndex = UserPanelUserCircle.ZIndex + 1
+	BlackFrame.ZIndex = UserPanelUserImage.ZIndex + 1
 
 	local BlackFrameCorner = Instance.new("UICorner")
 	BlackFrameCorner.CornerRadius = UDim.new(1, 0)
@@ -1788,6 +1890,7 @@ function DiscordLib:Window(text)
 	SettingsStatusIndicator.Position = UDim2.new(1, 4, 1, 4)
 	SettingsStatusIndicator.Size = UDim2.new(0, 14, 0, 14)
 	SettingsStatusIndicator.ZIndex = BlackFrame.ZIndex + 1
+	SettingsStatusIndicator.BorderColor3 = CurrentTheme.SettingsUserPanelBackground
 
 	local SettingsStatusIndicatorCorner = Instance.new("UICorner")
 	SettingsStatusIndicatorCorner.CornerRadius = UDim.new(1, 0)
@@ -1796,15 +1899,17 @@ function DiscordLib:Window(text)
 	local UserPanelUser = Instance.new("TextLabel")
 	Elements.UserPanelUser = UserPanelUser
 	UserPanelUser.Name = "UserPanelUser"
-	UserPanelUser.Parent = UserSettingsCard
+	UserPanelUser.Parent = UserPanelContentContainer
 	UserPanelUser.BackgroundTransparency = 1.000
-	UserPanelUser.Position = UDim2.new(0, 110, 0, 40)
-	UserPanelUser.AnchorPoint = Vector2.new(0, 0.5)
+	UserPanelUser.Position = UDim2.new(0, UserPanelUserIcon.Position.X.Offset + UserPanelUserIcon.Size.X.Offset + 20, 0, 65)
+	UserPanelUser.AnchorPoint = Vector2.new(0, 0)
 	UserPanelUser.Size = UDim2.new(0, 200, 0, 19)
 	UserPanelUser.Font = Enum.Font.GothamMedium
 	UserPanelUser.TextSize = 17.000
 	UserPanelUser.TextXAlignment = Enum.TextXAlignment.Left
 	UserPanelUser.Text = user
+	UserPanelUser.ZIndex = UserPanelContentContainer.ZIndex + 1
+
 
 	local UserSettingsPad = Instance.new("Frame")
 	Elements.UserSettingsPad = UserSettingsPad
@@ -2246,7 +2351,6 @@ function DiscordLib:Window(text)
 			local currentSettingOpenText = Elements.CurrentSettingOpen
 
 			if not (settingsFrame and userPanel and appearancePanel and languagePanel and currentSettingOpenText) then
-				warn("DiscordLib: Settings UI elements are missing!")
 				settingsopened = false
 				return
 			end
@@ -2299,7 +2403,6 @@ function DiscordLib:Window(text)
 			currentSettingOpenText.Parent = appearancePanel
 			currentSettingOpenText.Text = GetTranslation("header_appearance")
 		elseif targetPanel == languagePanel then
-			DiscordLib:Notification("Hey!", "This section is still in development, and can be very unstable! If you encounter any issue with this tab, or effects of it, please, report it to developer. Thanks!", "Ok.")
 			languagePanel.Visible = true
 			currentSettingOpenText.Parent = languagePanel
 			currentSettingOpenText.Text = GetTranslation("header_language")
@@ -2340,9 +2443,10 @@ function DiscordLib:Window(text)
 
 	UserInputService.InputBegan:Connect(function(io, p)
 		if p then return end
-		if io.KeyCode == Enum.KeyCode.Escape then
+		if io.KeyCode == Enum.KeyCode.LeftAlt then
 			local statusPopup = Elements.Userpad and Elements.Userpad:FindFirstChild("StatusPopup")
 			local avatarHolder = MainFrame:FindFirstChild("AvatarChangeHolder")
+			local bannerHolder = MainFrame:FindFirstChild("BannerChangeHolder")
 			local userHolder = MainFrame:FindFirstChild("UserChangeHolder")
 			local notifHolder = MainFrame:FindFirstChild("NotificationHolderMain")
 
@@ -2351,19 +2455,25 @@ function DiscordLib:Window(text)
 				if statusPopup and statusPopup.Parent then
 					statusPopup:TweenSize(UDim2.new(0, 140, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true, function() if statusPopup and statusPopup.Parent then statusPopup:Destroy() end end)
 				end
-			elseif avatarHolder then
+			elseif avatarHolder and avatarHolder.Visible then
 				local popup = avatarHolder:FindFirstChild("AvatarChangePopup")
 				if popup then popup:TweenSize(UDim2.new(0, 346, 0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.2, true) end
 				TweenService:Create(avatarHolder, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
 				task.wait(0.2)
 				if avatarHolder then avatarHolder:Destroy() end
-			elseif userHolder then
+			elseif bannerHolder and bannerHolder.Visible then
+				local popup = bannerHolder:FindFirstChild("BannerChangePopup")
+				if popup then popup:TweenSize(UDim2.new(0, 346, 0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.2, true) end
+				TweenService:Create(bannerHolder, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+				task.wait(0.2)
+				if bannerHolder then bannerHolder:Destroy() end
+			elseif userHolder and userHolder.Visible then
 				local popup = userHolder:FindFirstChild("UserChangePopup")
 				if popup then popup:TweenSize(UDim2.new(0, 346, 0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.2, true) end
 				TweenService:Create(userHolder, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
 				task.wait(0.2)
 				if userHolder then userHolder:Destroy() end
-			elseif notifHolder then
+			elseif notifHolder and notifHolder.Visible then
 				local popup = notifHolder:FindFirstChild("Notification")
 				if popup then popup:TweenSize(UDim2.new(0, 346, 0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.2, true) end
 				TweenService:Create(notifHolder, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
@@ -2380,10 +2490,239 @@ function DiscordLib:Window(text)
 		Elements.EditBtn.MouseLeave:Connect(function() TweenService:Create(Elements.EditBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground}):Play() end)
 	end
 
+	if Elements.EditBannerBtn then
+		Elements.EditBannerBtn.MouseEnter:Connect(function() TweenService:Create(Elements.EditBannerBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryHover}):Play() end)
+		Elements.EditBannerBtn.MouseLeave:Connect(function() TweenService:Create(Elements.EditBannerBtn, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground}):Play() end)
+	end
+
 	if Elements.UserPanelUserIcon and Elements.BlackFrame then
 		Elements.UserPanelUserIcon.MouseEnter:Connect(function() if Elements.BlackFrame then Elements.BlackFrame.Visible = true end end)
 		Elements.UserPanelUserIcon.MouseLeave:Connect(function() if Elements.BlackFrame then Elements.BlackFrame.Visible = false end end)
 	end
+
+	local function CreateBannerChangePopup()
+		local NotificationHolder = Instance.new("Frame")
+		NotificationHolder.Parent = MainFrame
+		NotificationHolder.Name = "BannerChangeHolder"
+		NotificationHolder.BackgroundColor3 = CurrentTheme.PopupSecondaryBackground
+		NotificationHolder.BackgroundTransparency = 1
+		NotificationHolder.Position = UDim2.new(0, 0, 0, 0)
+		NotificationHolder.Size = UDim2.new(1, 0, 1, 0)
+		NotificationHolder.ZIndex = 20
+		NotificationHolder.Visible = true
+		TweenService:Create(NotificationHolder, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
+
+		local BannerChange = Instance.new("Frame")
+		BannerChange.Name = "BannerChangePopup"
+		BannerChange.Parent = NotificationHolder
+		BannerChange.AnchorPoint = Vector2.new(0.5, 0.5)
+		BannerChange.BackgroundColor3 = CurrentTheme.PopupBackground
+		BannerChange.ClipsDescendants = true
+		BannerChange.Position = UDim2.new(0.5, 0, 0.5, 0)
+		BannerChange.Size = UDim2.new(0, 0, 0, 0)
+		BannerChange.ZIndex = 21
+
+		BannerChange:TweenSize(UDim2.new(0, 346, 0, 198), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+
+		local BannerChangeCorner = Instance.new("UICorner")
+		BannerChangeCorner.CornerRadius = UDim.new(0, 5)
+		BannerChangeCorner.Parent = BannerChange
+
+		local UnderBarFrame = Instance.new("Frame")
+		UnderBarFrame.Name = "UnderBarFrame"
+		UnderBarFrame.BackgroundColor3 = CurrentTheme.PopupSecondaryBackground
+		UnderBarFrame.BorderSizePixel = 0
+		UnderBarFrame.AnchorPoint = Vector2.new(0, 1)
+		UnderBarFrame.Position = UDim2.new(0, 0, 1, 0)
+		UnderBarFrame.Size = UDim2.new(1, 0, 0, 50)
+		UnderBarFrame.Parent = BannerChange
+
+
+		local Text1 = Instance.new("TextLabel")
+		Text1.Name = "Text1"
+		Text1.BackgroundTransparency = 1.000
+		Text1.Position = UDim2.new(0, 20, 0, 15)
+		Text1.Size = UDim2.new(1, -40, 0, 30)
+		Text1.Font = Enum.Font.GothamMedium
+		Text1.Text = GetTranslation("popup_changeBannerTitle")
+		Text1.TextColor3 = CurrentTheme.HeaderText
+		Text1.TextSize = 18.000
+		Text1.TextXAlignment = Enum.TextXAlignment.Left
+		Text1.Parent = BannerChange
+
+		local Text2 = Instance.new("TextLabel")
+		Text2.Name = "Text2"
+		Text2.BackgroundTransparency = 1.000
+		Text2.Position = UDim2.new(0, 20, 0, 45)
+		Text2.Size = UDim2.new(1, -40, 0, 30)
+		Text2.Font = Enum.Font.Gotham
+		Text2.Text = GetTranslation("popup_changeBannerDesc")
+		Text2.TextColor3 = CurrentTheme.SecondaryText
+		Text2.TextSize = 13.000
+		Text2.TextXAlignment = Enum.TextXAlignment.Left
+		Text2.Parent = BannerChange
+
+		local TextBoxFrameOutline = Instance.new("Frame")
+		TextBoxFrameOutline.Name = "TextBoxFrameOutline"
+		TextBoxFrameOutline.AnchorPoint = Vector2.new(0.5, 0)
+		TextBoxFrameOutline.BackgroundColor3 = CurrentTheme.InputOutline
+		TextBoxFrameOutline.Position = UDim2.new(0.5, 0, 0, 85)
+		TextBoxFrameOutline.Size = UDim2.new(0, 306, 0, 38)
+		TextBoxFrameOutline.Parent = BannerChange
+
+		local TextBoxFrameOutlineCorner = Instance.new("UICorner")
+		TextBoxFrameOutlineCorner.CornerRadius = UDim.new(0, 3)
+		TextBoxFrameOutlineCorner.Parent = TextBoxFrameOutline
+
+		local TextBoxFrame = Instance.new("Frame")
+		TextBoxFrame.Name = "TextBoxFrame"
+		TextBoxFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		TextBoxFrame.BackgroundColor3 = CurrentTheme.InputBackground
+		TextBoxFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+		TextBoxFrame.Size = UDim2.new(1, -2, 1, -2)
+		TextBoxFrame.Parent = TextBoxFrameOutline
+
+		local TextBoxFrameCorner = Instance.new("UICorner")
+		TextBoxFrameCorner.CornerRadius = UDim.new(0, 3)
+		TextBoxFrameCorner.Parent = TextBoxFrame
+
+		local BannerTextbox = Instance.new("TextBox")
+		BannerTextbox.Name = "BannerTextbox"
+		BannerTextbox.BackgroundTransparency = 1.000
+		BannerTextbox.Position = UDim2.new(0, 10, 0, 0)
+		BannerTextbox.Size = UDim2.new(1, -20, 1, 0)
+		BannerTextbox.Font = Enum.Font.Gotham
+		BannerTextbox.Text = ""
+		BannerTextbox.PlaceholderText = GetTranslation("popup_changeBannerPlaceholder")
+		BannerTextbox.PlaceholderColor3 = CurrentTheme.MutedText
+		BannerTextbox.TextColor3 = CurrentTheme.PrimaryText
+		BannerTextbox.TextSize = 14.000
+		BannerTextbox.TextXAlignment = Enum.TextXAlignment.Left
+		BannerTextbox.ClearTextOnFocus = false
+		BannerTextbox.Parent = TextBoxFrame
+
+		local ChangeBtn = Instance.new("TextButton")
+		ChangeBtn.Name = "ChangeBtn"
+		ChangeBtn.AnchorPoint = Vector2.new(1, 0.5)
+		ChangeBtn.BackgroundColor3 = CurrentTheme.ButtonBackground
+		ChangeBtn.Position = UDim2.new(1, -15, 0.5, 0)
+		ChangeBtn.Size = UDim2.new(0, 80, 0, 32)
+		ChangeBtn.Font = Enum.Font.GothamMedium
+		ChangeBtn.Text = GetTranslation("popup_changeButton")
+		ChangeBtn.TextColor3 = CurrentTheme.ButtonText
+		ChangeBtn.TextSize = 14.000
+		ChangeBtn.AutoButtonColor = false
+		ChangeBtn.Parent = UnderBarFrame
+
+		local ChangeCorner = Instance.new("UICorner")
+		ChangeCorner.CornerRadius = UDim.new(0, 4)
+		ChangeCorner.Parent = ChangeBtn
+
+		local ResetBtn = Instance.new("TextButton")
+		ResetBtn.Name = "ResetBtn"
+		ResetBtn.AnchorPoint = Vector2.new(1, 0.5)
+		ResetBtn.BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground
+		ResetBtn.BackgroundTransparency = 0
+		ResetBtn.Position = UDim2.new(1, -105, 0.5, 0)
+		ResetBtn.Size = UDim2.new(0, 76, 0, 32)
+		ResetBtn.Font = Enum.Font.GothamMedium
+		ResetBtn.Text = GetTranslation("popup_resetButton")
+		ResetBtn.TextColor3 = CurrentTheme.ButtonText
+		ResetBtn.TextSize = 14.000
+		ResetBtn.AutoButtonColor = false
+		ResetBtn.Parent = UnderBarFrame
+
+		local ResetCorner = Instance.new("UICorner")
+		ResetCorner.CornerRadius = UDim.new(0, 4)
+		ResetCorner.Parent = ResetBtn
+
+		local CloseBtn1 = Instance.new("TextButton")
+		CloseBtn1.Name = "CloseBtn1"
+		CloseBtn1.AnchorPoint = Vector2.new(0, 0.5)
+		CloseBtn1.BackgroundTransparency = 1.000
+		CloseBtn1.Position = UDim2.new(0, 15, 0.5, 0)
+		CloseBtn1.Size = UDim2.new(0, 76, 0, 32)
+		CloseBtn1.Font = Enum.Font.GothamMedium
+		CloseBtn1.Text = GetTranslation("popup_cancelButton")
+		CloseBtn1.TextColor3 = CurrentTheme.SecondaryText
+		CloseBtn1.TextSize = 14.000
+		CloseBtn1.AutoButtonColor = false
+		CloseBtn1.Parent = UnderBarFrame
+
+		local CloseBtn2 = Instance.new("TextButton")
+		CloseBtn2.Name = "CloseBtn2"
+		CloseBtn2.BackgroundTransparency = 1.000
+		CloseBtn2.Position = UDim2.new(1, -30, 0, 5)
+		CloseBtn2.AnchorPoint = Vector2.new(1, 0)
+		CloseBtn2.Size = UDim2.new(0, 26, 0, 26)
+		CloseBtn2.Font = Enum.Font.Gotham
+		CloseBtn2.Text = ""
+		CloseBtn2.AutoButtonColor = false
+		CloseBtn2.ZIndex = 12
+		CloseBtn2.Parent = BannerChange
+
+		local Close2Icon = Instance.new("ImageLabel")
+		Close2Icon.Name = "Close2Icon"
+		Close2Icon.BackgroundTransparency = 1.000
+		Close2Icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		Close2Icon.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Close2Icon.Size = UDim2.new(0, 20, 0, 20)
+		Close2Icon.Image = "http://www.roblox.com/asset/?id=6035047409"
+		Close2Icon.ImageColor3 = CurrentTheme.IconColor
+		Close2Icon.Parent = CloseBtn2
+
+		local function CloseBannerPopup()
+			BannerChange:TweenSize(UDim2.new(0, 346, 0, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.2, true)
+			TweenService:Create(NotificationHolder, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+			task.wait(0.2)
+			if NotificationHolder then NotificationHolder:Destroy() end
+		end
+
+		CloseBtn1.MouseButton1Click:Connect(CloseBannerPopup)
+		CloseBtn2.MouseButton1Click:Connect(CloseBannerPopup)
+		NotificationHolder.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				local mousePos = UserInputService:GetMouseLocation()
+				local popupRect = Rect.new(BannerChange.AbsolutePosition, BannerChange.AbsolutePosition + BannerChange.AbsoluteSize)
+				if not (mousePos.X >= popupRect.Min.X and mousePos.X <= popupRect.Max.X and mousePos.Y >= popupRect.Min.Y and mousePos.Y <= popupRect.Max.Y) then CloseBannerPopup() end
+			end
+		end)
+		ChangeBtn.MouseButton1Click:Connect(function()
+			local newBanner = BannerTextbox.Text
+			if newBanner:match("^rbxassetid://%d+") or newBanner:match("^https?://") or newBanner == DEFAULT_BANNER then
+				local oldBanner = banner
+				banner = newBanner
+				local successBanner, _ = pcall(function() if Elements.UserBannerImage then Elements.UserBannerImage.Image = banner end end)
+				if not successBanner then
+					banner = oldBanner
+					if Elements.UserBannerImage then Elements.UserBannerImage.Image = banner end
+					DiscordLib:Notification(GetTranslation("popup_changeBannerErrorTitle"), GetTranslation("popup_changeBannerErrorInvalid"), GetTranslation("popup_okayButton"))
+					return
+				end
+				SaveInfo()
+				CloseBannerPopup()
+			else
+				DiscordLib:Notification(GetTranslation("popup_changeBannerErrorTitle"), GetTranslation("popup_changeBannerErrorInvalid"), GetTranslation("popup_okayButton"))
+			end
+		end)
+		ResetBtn.MouseButton1Click:Connect(function()
+			banner = DEFAULT_BANNER
+			if Elements.UserBannerImage then Elements.UserBannerImage.Image = banner end
+			SaveInfo()
+			CloseBannerPopup()
+		end)
+		ChangeBtn.MouseEnter:Connect(function() TweenService:Create(ChangeBtn, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonHover}):Play() end)
+		ChangeBtn.MouseLeave:Connect(function() TweenService:Create(ChangeBtn, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonBackground}):Play() end)
+		ResetBtn.MouseEnter:Connect(function() TweenService:Create(ResetBtn, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonSecondaryHover}):Play() end)
+		ResetBtn.MouseLeave:Connect(function() TweenService:Create(ResetBtn, TweenInfo.new(0.1), {BackgroundColor3 = CurrentTheme.ButtonSecondaryBackground}):Play() end)
+		CloseBtn1.MouseEnter:Connect(function() TweenService:Create(CloseBtn1, TweenInfo.new(0.1), {TextColor3 = CurrentTheme.PrimaryText}):Play() end)
+		CloseBtn1.MouseLeave:Connect(function() TweenService:Create(CloseBtn1, TweenInfo.new(0.1), {TextColor3 = CurrentTheme.SecondaryText}):Play() end)
+		CloseBtn2.MouseEnter:Connect(function() TweenService:Create(Close2Icon, TweenInfo.new(0.1), {ImageColor3 = CurrentTheme.IconHoverColor}):Play() end)
+		CloseBtn2.MouseLeave:Connect(function() TweenService:Create(Close2Icon, TweenInfo.new(0.1), {ImageColor3 = CurrentTheme.IconColor}):Play() end)
+		BannerTextbox.Focused:Connect(function() TweenService:Create(TextBoxFrameOutline, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.InputOutlineFocus}):Play() end)
+		BannerTextbox.FocusLost:Connect(function() TweenService:Create(TextBoxFrameOutline, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.InputOutline}):Play() end)
+	end
+
 
 	if Elements.UserPanelUserIcon then
 		Elements.UserPanelUserIcon.MouseButton1Click:Connect(function()
@@ -2575,12 +2914,20 @@ function DiscordLib:Window(text)
 			end)
 			ChangeBtn.MouseButton1Click:Connect(function()
 				local newPfp = AvatarTextbox.Text
-				if newPfp:match("^rbxassetid://%d+") or newPfp:match("^https?://") then
+				local assetId = nil
+
+				if newPfp:match("^rbxassetid://(%d+)") then
+					assetId = tonumber(newPfp:match("^rbxassetid://(%d+)")[1])
+				elseif newPfp:match("^https?://www.roblox.com/asset/?id=(%d+)") then
+					assetId = tonumber(newPfp:match("^https?://www.roblox.com/asset/?id=(%d+)")[1])
+				end
+
+				if assetId then
 					local oldPfp = pfp
-					pfp = newPfp
-					local successPfp, _ = pcall(function() if Elements.UserImage then Elements.UserImage.Image = pfp end end)
-					local successPanelPfp, _ = pcall(function() if Elements.UserPanelUserImage then Elements.UserPanelUserImage.Image = pfp end end)
-					if not successPfp or not successPanelPfp then
+					pfp = "rbxassetid://" .. assetId
+					local successPfp1, _ = pcall(function() if Elements.UserImage then Elements.UserImage.Image = pfp end end)
+					local successPfp2, _ = pcall(function() if Elements.UserPanelUserImage then Elements.UserPanelUserImage.Image = pfp end end)
+					if not successPfp1 or not successPfp2 then
 						pfp = oldPfp
 						if Elements.UserImage then Elements.UserImage.Image = pfp end
 						if Elements.UserPanelUserImage then Elements.UserPanelUserImage.Image = pfp end
@@ -2590,7 +2937,7 @@ function DiscordLib:Window(text)
 					SaveInfo()
 					CloseAvatarPopup()
 				else
-					DiscordLib:Notification(GetTranslation("popup_changeAvatarErrorTitle"), GetTranslation("popup_changeAvatarDesc"), GetTranslation("popup_okayButton"))
+					DiscordLib:Notification(GetTranslation("popup_changeAvatarErrorTitle"), GetTranslation("popup_changeAvatarErrorInvalid"), GetTranslation("popup_okayButton"))
 				end
 			end)
 			ResetBtn.MouseButton1Click:Connect(function()
@@ -2611,6 +2958,10 @@ function DiscordLib:Window(text)
 			AvatarTextbox.Focused:Connect(function() TweenService:Create(TextBoxFrameOutline, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.InputOutlineFocus}):Play() end)
 			AvatarTextbox.FocusLost:Connect(function() TweenService:Create(TextBoxFrameOutline, TweenInfo.new(0.2), {BackgroundColor3 = CurrentTheme.InputOutline}):Play() end)
 		end)
+	end
+
+	if Elements.EditBannerBtn then
+		Elements.EditBannerBtn.MouseButton1Click:Connect(CreateBannerChangePopup)
 	end
 
 	if Elements.EditBtn then
@@ -3747,7 +4098,7 @@ function DiscordLib:Window(text)
 				end)
 				UpdateCanvasSize()
 			end
-			
+
 			function ChannelContent:Dropdown(text, list, callback)
 				local DropFunc = {}
 				local itemcount = 0
