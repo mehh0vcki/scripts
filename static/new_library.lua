@@ -49,7 +49,7 @@ local Languages = {
 		settings_myAccount = "My Account",
 		settings_appearance = "Appearance",
 		settings_language = "Language",
-		settings_discordInfo = "Stable 1.0.2 (00003)\nHost 1.0.0\nRoblox Luau Engine",
+		settings_discordInfo = "Stable 1.0.3 (00004)\nHost 1.0.0\nRoblox Luau Engine",
 		settings_escHint = "LALT",
 
 		header_myAccount = "MY ACCOUNT",
@@ -2164,6 +2164,7 @@ function DiscordLib:Window(text)
 		MainFrame:TweenSize(UDim2.new(0, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .3, true, function()
 			pcall(function() if dragCleanup then dragCleanup() end end)
 			Discord:Destroy()
+			DiscordLib = nil
 		end)
 	end)
 
